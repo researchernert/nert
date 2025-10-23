@@ -1,0 +1,2560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NERT-Bench: Neurosymbolic Evaluation of LLM-Based Robot Task Planning</title>
+    <style>
+        :root {
+            --bg-primary: #fbf8f3;
+            --bg-secondary: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #4a4a4a;
+            --text-tertiary: #6b7280;
+            --border-primary: #e5e7eb;
+            --accent-primary: #3b82f6;
+            --accent-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+            --button-active: #1a1a1a;
+        }
+
+        /* Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-weight: 400;
+            margin: 0;
+            min-height: 100vh;
+            text-rendering: optimizeLegibility;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Header */
+        .header-section {
+            background-color: var(--bg-primary);
+            padding: 40px 48px 30px;
+            position: relative;
+        }
+
+        .header-title {
+            font-size: 48px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 8px;
+        }
+
+        .header-subtitle {
+            font-size: 16px;
+            color: #666666;
+            margin: 0;
+            line-height: 1.5;
+        }
+
+
+        /* Section Divider with Shadow */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent 0%, #e5e7eb 20%, #e5e7eb 80%, transparent 100%);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .section-divider::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.05) 50%, transparent 100%);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 0 48px 48px;
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 40px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Section Labels */
+        .section-label {
+            font-size: 28px;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            font-size: 14px;
+            color: var(--text-tertiary);
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .input-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-primary);
+            overflow: hidden;
+        }
+
+        .results-section {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border-primary);
+            overflow: hidden;
+        }
+
+        .section-content {
+            padding: 32px;
+        }
+
+        /* Pipeline Stages */
+        .pipeline-stage {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            margin: 16px 0;
+            border: 1px solid var(--border-primary);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+
+        .pipeline-stage:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .pipeline-stage.active {
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+        }
+
+        .pipeline-stage.passed {
+            border-color: var(--success);
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.15);
+        }
+
+        .pipeline-stage.failed {
+            background: #fef8f8;
+            border-color: var(--error);
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15);
+        }
+
+        .pipeline-stage.skipped {
+            opacity: 0.5;
+            border-color: #9ca3af;
+        }
+
+        .pipeline-stage.skipped .stage-icon {
+            background: #f3f4f6;
+            color: #9ca3af;
+            border-color: #d1d5db;
+        }
+
+        .stage-header {
+            display: flex;
+            align-items: flex-start;
+            padding: 24px;
+            padding-bottom: 0;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .stage-divider {
+            height: 1px;
+            background: rgba(0, 0, 0, 0.15);
+            margin: 0;
+            width: 100%;
+        }
+
+        .stage-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            font-size: 24px;
+            background: #f8fafc;
+            border: 3px solid #e2e8f0;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .pipeline-stage.active .stage-icon {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+            transform: scale(1.05);
+        }
+
+        .pipeline-stage.passed .stage-icon {
+            background: var(--success);
+            color: white;
+            border-color: var(--success);
+            transform: scale(1.05);
+        }
+
+        .pipeline-stage.failed .stage-icon {
+            background: var(--error);
+            color: white;
+            border-color: var(--error);
+            transform: scale(1.05);
+        }
+
+        .stage-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .stage-title {
+            font-weight: 700;
+            font-size: 20px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .stage-subtitle {
+            font-size: 14px;
+            color: var(--accent-primary);
+            font-weight: 500;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .stage-details {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            padding: 16px 24px 24px 100px; 
+        }
+
+        .stage-expand-btn {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .stage-expand-btn:hover {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+            transform: scale(1.05);
+        }
+
+        .stage-results {
+            background: #fafbfc;
+            border-top: 1px solid var(--border-primary);
+            margin: 0;
+            display: none;
+            padding: 0;
+        }
+
+        .stage-results.expanded {
+            display: block;
+        }
+
+        .result-container {
+            padding: 24px;
+        }
+
+        .result-header {
+            background: var(--bg-primary);
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-primary);
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+
+        .decision-overview {
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border: 2px solid var(--border-primary);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        .decision-status {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .decision-status.approved {
+            color: var(--success);
+        }
+
+        .decision-status.rejected {
+            color: var(--error);
+        }
+
+        .confidence-display {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .confidence-context {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .analysis-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .analysis-card-header {
+            background: var(--bg-primary);
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-primary);
+        }
+
+        .analysis-card-content {
+            padding: 16px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .evidence-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .evidence-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .evidence-item:last-child {
+            border-bottom: none;
+        }
+
+        .evidence-text {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .evidence-label {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            margin-left: 12px;
+        }
+
+        .evidence-label.safe {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .evidence-label.unsafe {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid var(--border-primary);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            transition: border-color 0.2s ease;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border-primary);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: border-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-help {
+            display: block;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        /* Collapsible Panel Styles */
+        .collapsible-header {
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+
+        .collapsible-header:hover {
+            background: var(--hover-bg) !important;
+        }
+
+        .collapsible-panel {
+            transition: all 0.3s ease;
+        }
+
+        /* Skill Toggle Styles */
+        .skill-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+        }
+
+        .skill-toggle {
+            position: relative;
+            width: 48px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .skill-toggle.active {
+            background: var(--accent-primary);
+        }
+
+        .skill-toggle-slider {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .skill-toggle.active .skill-toggle-slider {
+            transform: translateX(24px);
+        }
+
+        /* Object Checkbox Styles */
+        .object-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            margin-bottom: 6px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .object-item:hover {
+            background: var(--hover-bg);
+        }
+
+        .object-checkbox {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        /* Button Styling */
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background-color: var(--button-active);
+            color: white;
+            font-size: 13px;
+            padding: 8px 20px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background-color: #333;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary:disabled {
+            background: #cbd5e1;
+            color: #64748b;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Example Buttons */
+        .example-controls {
+            margin-top: 24px;
+        }
+
+        .example-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #666666;
+            margin-bottom: 12px;
+        }
+
+        .example-buttons {
+            display: flex;
+            background-color: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #f0f0f0;
+            overflow: hidden;
+        }
+
+        .btn-example {
+            flex: 1;
+            padding: 8px 20px;
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-example:not(:last-child) {
+            border-right: 1px solid #e5e5e5;
+        }
+
+        .btn-example.active {
+            background-color: var(--button-active);
+            color: white;
+        }
+
+        .btn-example:not(.active):hover {
+            background-color: #f0f0f0;
+        }
+
+        /* Status Message */
+        .status-message {
+            padding: 20px 24px;
+            background: #f0f8ff;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--accent-primary);
+            box-shadow: var(--shadow-sm);
+            display: none;
+        }
+
+        .status-text {
+            font-size: 16px;
+            color: var(--text-primary);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(59, 130, 246, 0.2);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Code Display */
+        .code-block {
+            background: #1a1a1a;
+            color: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            line-height: 1.5;
+            border: 1px solid var(--border-primary);
+            margin: 16px 0;
+        }
+
+        .code-block pre {
+            margin: 0;
+            background: none;
+            padding: 0;
+        }
+
+        /* Invariant Display */
+        .invariant-section {
+            margin: 16px 0;
+        }
+
+        .invariant-category {
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border: 1px solid var(--border-primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .invariant-category h6 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .invariant-list {
+            background: var(--bg-primary);
+            padding: 16px;
+            border-radius: 6px;
+            border: 1px solid var(--border-primary);
+        }
+
+        .invariant-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--text-secondary);
+        }
+
+        .invariant-item:last-child {
+            border-bottom: none;
+        }
+
+        /* Nearest Neighbor Display */
+        .nearest-neighbor {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-secondary);
+            margin: 8px 0;
+            border-radius: 8px;
+            border: 1px solid var(--border-primary);
+            transition: all 0.2s ease;
+        }
+
+        .nearest-neighbor:hover {
+            box-shadow: var(--shadow-sm);
+            transform: translateX(4px);
+        }
+
+        .neighbor-text {
+            flex: 1;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .neighbor-label {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .neighbor-label.safe {
+            background: var(--success);
+            color: white;
+        }
+
+        .neighbor-label.unsafe {
+            background: var(--error);
+            color: white;
+        }
+
+        .causal-section {
+            margin-bottom: 16px;
+        }
+
+        .causal-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .causal-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            margin-bottom: 6px;
+        }
+
+        .causal-value {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status.success {
+            background-color: #dcfce7;
+            color: #16a34a;
+        }
+
+        .status.failure {
+            background-color: #fef2f2;
+            color: #dc2626;
+        }
+
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+
+            .main-content {
+                padding: 0 20px 48px;
+            }
+
+            .header-section {
+                padding: 30px 20px 20px;
+            }
+
+            .header-title {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header-section">
+        <h1 class="header-title">🤖 NERT-Bench: Neurosymbolic Evaluation of LLM-Based Robot Task Planning</h1>
+        <p class="header-subtitle">Combining Formal Symbolic Reasoning with Neural Contrastive Learning for Safe Robot Task Planning</p>
+
+        <!-- Mode Selector in Header (Right Aligned) -->
+        <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+            <div class="example-buttons">
+                <button id="mode-nert-btn" class="btn-example active" onclick="selectMode('nert')">NERT</button>
+                <button id="mode-base-llm-btn" class="btn-example" onclick="selectMode('base_llm')">Base LLM (No NERT)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Divider with Shadow -->
+    <div class="section-divider"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="content-grid">
+            <!-- A. Task Input Section -->
+            <div class="input-section">
+                <div class="section-content">
+                    <h2 class="section-label">A. Task Input</h2>
+                    <p class="section-subtitle">Describe your desired robot task and provide environmental context for comprehensive safety analysis.</p>
+
+                    <div class="form-group">
+                        <label class="form-label" for="task-input">Task Description:</label>
+                        <textarea
+                            id="task-input"
+                            class="form-textarea"
+                            rows="4"
+                            placeholder="Describe the task you want the robot to perform..."
+                        >Put apple in fridge</textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="scene-input">Scene Context (optional):</label>
+                        <textarea
+                            id="scene-input"
+                            class="form-textarea"
+                            rows="3"
+                            placeholder="Describe any important context about the environment..."
+                        ></textarea>
+                    </div>
+
+                    <button
+                        id="process-btn"
+                        class="btn btn-primary"
+                        onclick="processTask()"
+                        style="margin-bottom: 12px;"
+                    >
+                        Analyze Task Safety
+                    </button>
+
+                    <!-- Processing indicator under button -->
+                    <div id="processing-indicator" style="display: none; margin-bottom: 24px; padding: 12px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid var(--accent-primary);">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="spinner"></div>
+                            <span style="font-size: 14px; color: var(--text-primary);">Analyzing task safety...</span>
+                        </div>
+                    </div>
+
+                    <!-- Example Tasks -->
+                    <div class="example-controls" style="margin-bottom: 24px;">
+                        <div class="example-label">Example Tasks:</div>
+                        <div class="example-buttons">
+                            <button class="btn-example" onclick="loadExample('safe')">Safe Task</button>
+                            <button class="btn-example" onclick="loadExample('unsafe')">Unsafe Task</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 24px;">
+                        <label class="form-label" for="model-select">LLM Model:</label>
+                        <select id="model-select" class="form-select">
+                            <option value="gpt-4o">Loading models...</option>
+                        </select>
+                        <small class="form-help">Select the LLM model for task validation analysis</small>
+                    </div>
+
+                    <!-- Floor Plan / Room Type Selector -->
+                    <div class="form-group" style="margin-top: 20px;">
+                        <label class="form-label" for="room-type-select">Room Type:</label>
+                        <select id="room-type-select" class="form-select">
+                            <option value="kitchen">Kitchen</option>
+                            <option value="living">Living Room</option>
+                            <option value="bedroom">Bedroom</option>
+                            <option value="bathroom">Bathroom</option>
+                        </select>
+                        <small class="form-help">Select the type of room for the simulation</small>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label class="form-label" for="layout-select">Layout Number:</label>
+                        <select id="layout-select" class="form-select">
+                        </select>
+                        <small class="form-help">Select the specific layout variant (1-30)</small>
+                    </div>
+
+                    <!-- Scene Object Customization Panel -->
+                    <div class="form-group" style="margin-top: 20px;">
+                        <div class="collapsible-header" onclick="togglePanel('objects-panel')" style="cursor: pointer; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 600; color: var(--text-primary);">⚙️ Customize Scene Objects</span>
+                            <span id="objects-panel-arrow" style="transition: transform 0.3s;">▼</span>
+                        </div>
+                        <div id="objects-panel" class="collapsible-panel" style="display: none; margin-top: 12px; padding: 16px; background: var(--bg-secondary); border-radius: 8px;">
+                            <div id="scene-objects-list" style="max-height: 300px; overflow-y: auto; margin-bottom: 12px;">
+                                <div style="color: var(--text-secondary);">Loading scene objects...</div>
+                            </div>
+                            <div style="display: flex; gap: 8px; margin-top: 12px;">
+                                <button class="btn btn-secondary" onclick="resetSceneObjects()" style="flex: 1;">Reset to Default</button>
+                                <button class="btn btn-primary" onclick="applySceneChanges()" style="flex: 1;">Apply Changes</button>
+                            </div>
+                            <div style="margin-top: 12px; padding: 12px; background: var(--bg-primary); border-radius: 6px;">
+                                <small style="color: var(--text-tertiary);">Remove objects to test how the system handles missing resources</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Robot Skills Toggle Panel -->
+                    <div class="form-group" style="margin-top: 20px;">
+                        <div class="collapsible-header" onclick="togglePanel('skills-panel')" style="cursor: pointer; padding: 12px; background: var(--bg-secondary); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 600; color: var(--text-primary);">🤖 Robot Capabilities</span>
+                            <span id="skills-panel-arrow" style="transition: transform 0.3s;">▼</span>
+                        </div>
+                        <div id="skills-panel" class="collapsible-panel" style="display: none; margin-top: 12px; padding: 16px; background: var(--bg-secondary); border-radius: 8px;">
+                            <div id="robot-skills-list">
+                            </div>
+                            <div style="margin-top: 12px; padding: 12px; background: var(--bg-primary); border-radius: 6px;">
+                                <small style="color: var(--text-tertiary);">Disable skills to test how the system handles missing capabilities</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- B. Safety Analysis Pipeline -->
+            <div class="results-section">
+                <div class="section-content">
+                    <h2 class="section-label">B. Safety Analysis Pipeline</h2>
+                    <p class="section-subtitle">Real-time neurosymbolic verification through six-stage safety analysis combining neural networks with formal verification methods.</p>
+
+                    <div class="status-message" id="status-message">
+                        <div class="status-text" id="status-text">Ready to analyze your task...</div>
+                    </div>
+
+                    <div id="pipeline-visualization">
+                        <!-- Stage 1: Neurosymbolic Safety Check -->
+                        <div class="pipeline-stage" id="stage-1">
+                            <div class="stage-header" onclick="toggleStageResults(1)">
+                                <div class="stage-icon">🛡️</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">1. Neurosymbolic Verification</div>
+                                    <div class="stage-subtitle">Safety analysis</div>
+                                </div>
+                                <button class="stage-expand-btn" id="expand-btn-1" onclick="event.stopPropagation(); toggleStageResults(1);">+</button>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-details" id="stage-1-details">Neural and symbolic safety verification pending</div>
+                            <div class="stage-results" id="stage-results-1">
+                                <div id="stage-1-content"></div>
+                            </div>
+                        </div>
+
+                        <!-- Stage 2: Invariant Generation -->
+                        <div class="pipeline-stage" id="stage-2">
+                            <div class="stage-header" onclick="toggleStageResults(2)">
+                                <div class="stage-icon">⚙️</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">2. Invariant Generation</div>
+                                    <div class="stage-subtitle">PDDL, LTL, STL constraints</div>
+                                </div>
+                                <button class="stage-expand-btn" id="expand-btn-2" onclick="event.stopPropagation(); toggleStageResults(2);">+</button>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-details" id="stage-2-details">Safety constraint generation pending</div>
+                            <div class="stage-results" id="stage-results-2">
+                                <div id="stage-2-content"></div>
+                            </div>
+                        </div>
+
+                        <!-- Stage 3: Grounding Verification -->
+                        <div class="pipeline-stage" id="stage-3">
+                            <div class="stage-header" onclick="toggleStageResults(3)">
+                                <div class="stage-icon">🎯</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">3. Grounding Verification</div>
+                                    <div class="stage-subtitle">Resource availability</div>
+                                </div>
+                                <button class="stage-expand-btn" id="expand-btn-3" onclick="event.stopPropagation(); toggleStageResults(3);">+</button>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-details" id="stage-3-details">Environment grounding pending</div>
+                            <div class="stage-results" id="stage-results-3">
+                                <div id="stage-3-content"></div>
+                            </div>
+                        </div>
+
+                        <!-- Stage 4: Code Generation -->
+                        <div class="pipeline-stage" id="stage-4">
+                            <div class="stage-header" onclick="toggleStageResults(4)">
+                                <div class="stage-icon">💻</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">4. Code Generation</div>
+                                    <div class="stage-subtitle">Robot instruction synthesis</div>
+                                </div>
+                                <button class="stage-expand-btn" id="expand-btn-4" onclick="event.stopPropagation(); toggleStageResults(4);">+</button>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-details" id="stage-4-details">Code generation pending</div>
+                            <div class="stage-results" id="stage-results-4">
+                                <div id="stage-4-content"></div>
+                            </div>
+                        </div>
+
+                        <!-- Stage 5: Code Verification -->
+                        <div class="pipeline-stage" id="stage-5">
+                            <div class="stage-header" onclick="toggleStageResults(5)">
+                                <div class="stage-icon">✅</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">5. Code Verification</div>
+                                    <div class="stage-subtitle">Safety compliance check</div>
+                                </div>
+                                <button class="stage-expand-btn" id="expand-btn-5" onclick="event.stopPropagation(); toggleStageResults(5);">+</button>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-details" id="stage-5-details">Code verification pending</div>
+                            <div class="stage-results" id="stage-results-5">
+                                <div id="stage-5-content"></div>
+                            </div>
+                        </div>
+
+                        <!-- Stage 6: Task Execution -->
+                        <div class="pipeline-stage" id="stage-6">
+                            <div class="stage-header" onclick="toggleStageResults(6)">
+                                <div class="stage-icon">🤖</div>
+                                <div class="stage-content">
+                                    <div class="stage-title">6. Task Execution</div>
+                                    <div class="stage-subtitle">AI2-THOR simulation</div>
+                                </div>
+                                <button class="stage-expand-btn" id="expand-btn-6" onclick="event.stopPropagation(); toggleStageResults(6);">+</button>
+                            </div>
+                            <div class="stage-divider"></div>
+                            <div class="stage-details" id="stage-6-details">Execution pending</div>
+                            <div class="stage-results" id="stage-results-6">
+                                <div id="stage-6-content"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Track stage results data
+        let stageResultsData = {};
+
+        let currentSceneObjects = [];
+        let currentFloorPlan = 1;
+
+        // Track selected evaluation mode
+        let selectedMode = 'nert';  // Default to NERT
+
+        // Mode selection function
+        function selectMode(mode) {
+            selectedMode = mode;
+
+            const nertBtn = document.getElementById('mode-nert-btn');
+            const baseLLMBtn = document.getElementById('mode-base-llm-btn');
+
+            if (mode === 'nert') {
+                nertBtn.classList.add('active');
+                baseLLMBtn.classList.remove('active');
+            } else {
+                nertBtn.classList.remove('active');
+                baseLLMBtn.classList.add('active');
+            }
+
+            rebuildPipelineStages(mode);
+        }
+
+        // Rebuild pipeline stages based on mode
+        function rebuildPipelineStages(mode) {
+            const pipelineDiv = document.getElementById('pipeline-visualization');
+            const subtitle = document.querySelector('.results-section .section-subtitle');
+
+            if (mode === 'nert') {
+                // Update subtitle
+                subtitle.textContent = 'Real-time neurosymbolic verification through six-stage safety analysis combining neural networks with formal verification methods.';
+
+                // Create 6 NERT stages
+                pipelineDiv.innerHTML = `
+                    <!-- Stage 1: Neurosymbolic Safety Check -->
+                    <div class="pipeline-stage" id="stage-1">
+                        <div class="stage-header" onclick="toggleStageResults(1)">
+                            <div class="stage-icon">🛡️</div>
+                            <div class="stage-content">
+                                <div class="stage-title">1. Neurosymbolic Verification</div>
+                                <div class="stage-subtitle">Safety analysis</div>
+                            </div>
+                            <button class="stage-expand-btn" id="expand-btn-1" onclick="event.stopPropagation(); toggleStageResults(1);">+</button>
+                        </div>
+                        <div class="stage-divider"></div>
+                        <div class="stage-details" id="stage-1-details">Neural and symbolic safety verification pending</div>
+                        <div class="stage-results" id="stage-results-1">
+                            <div id="stage-1-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 2: Invariant Generation -->
+                    <div class="pipeline-stage" id="stage-2">
+                        <div class="stage-header" onclick="toggleStageResults(2)">
+                            <div class="stage-icon">⚙️</div>
+                            <div class="stage-content">
+                                <div class="stage-title">2. Invariant Generation</div>
+                                <div class="stage-subtitle">PDDL, LTL, STL constraints</div>
+                            </div>
+                            <button class="stage-expand-btn" id="expand-btn-2" onclick="event.stopPropagation(); toggleStageResults(2);">+</button>
+                        </div>
+                        <div class="stage-divider"></div>
+                        <div class="stage-details" id="stage-2-details">Safety constraint generation pending</div>
+                        <div class="stage-results" id="stage-results-2">
+                            <div id="stage-2-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 3: Grounding Verification -->
+                    <div class="pipeline-stage" id="stage-3">
+                        <div class="stage-header" onclick="toggleStageResults(3)">
+                            <div class="stage-icon">🎯</div>
+                            <div class="stage-content">
+                                <div class="stage-title">3. Grounding Verification</div>
+                                <div class="stage-subtitle">Resource availability</div>
+                            </div>
+                            <button class="stage-expand-btn" id="expand-btn-3" onclick="event.stopPropagation(); toggleStageResults(3);">+</button>
+                        </div>
+                        <div class="stage-divider"></div>
+                        <div class="stage-details" id="stage-3-details">Environment grounding pending</div>
+                        <div class="stage-results" id="stage-results-3">
+                            <div id="stage-3-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 4: Code Generation -->
+                    <div class="pipeline-stage" id="stage-4">
+                        <div class="stage-header" onclick="toggleStageResults(4)">
+                            <div class="stage-icon">💻</div>
+                            <div class="stage-content">
+                                <div class="stage-title">4. Code Generation</div>
+                                <div class="stage-subtitle">Robot instruction synthesis</div>
+                            </div>
+                            <button class="stage-expand-btn" id="expand-btn-4" onclick="event.stopPropagation(); toggleStageResults(4);">+</button>
+                        </div>
+                        <div class="stage-divider"></div>
+                        <div class="stage-details" id="stage-4-details">Code generation pending</div>
+                        <div class="stage-results" id="stage-results-4">
+                            <div id="stage-4-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 5: Code Verification -->
+                    <div class="pipeline-stage" id="stage-5">
+                        <div class="stage-header" onclick="toggleStageResults(5)">
+                            <div class="stage-icon">✅</div>
+                            <div class="stage-content">
+                                <div class="stage-title">5. Code Verification</div>
+                                <div class="stage-subtitle">Safety compliance check</div>
+                            </div>
+                            <button class="stage-expand-btn" id="expand-btn-5" onclick="event.stopPropagation(); toggleStageResults(5);">+</button>
+                        </div>
+                        <div class="stage-divider"></div>
+                        <div class="stage-details" id="stage-5-details">Code verification pending</div>
+                        <div class="stage-results" id="stage-results-5">
+                            <div id="stage-5-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 6: Task Execution -->
+                    <div class="pipeline-stage" id="stage-6">
+                        <div class="stage-header" onclick="toggleStageResults(6)">
+                            <div class="stage-icon">🤖</div>
+                            <div class="stage-content">
+                                <div class="stage-title">6. Task Execution</div>
+                                <div class="stage-subtitle">AI2-THOR simulation</div>
+                            </div>
+                            <button class="stage-expand-btn" id="expand-btn-6" onclick="event.stopPropagation(); toggleStageResults(6);">+</button>
+                        </div>
+                        <div class="stage-divider"></div>
+                        <div class="stage-details" id="stage-6-details">Execution pending</div>
+                        <div class="stage-results" id="stage-results-6">
+                            <div id="stage-6-content"></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Base LLM mode - 3 stages only
+                subtitle.textContent = 'Base LLM evaluation using direct prompting without neurosymbolic reasoning.';
+
+                pipelineDiv.innerHTML = `
+                    <!-- Stage 1: Task Analysis -->
+                    <div class="pipeline-stage" id="stage-1">
+                        <div class="stage-header" onclick="toggleStageResults(1)">
+                            <div class="stage-icon">🔍</div>
+                            <div class="stage-content">
+                                <div class="stage-title">1. Task Analysis</div>
+                                <div class="stage-subtitle">Safety evaluation</div>
+                            </div>
+                            <button class="stage-expand-btn" id="expand-btn-1" onclick="event.stopPropagation(); toggleStageResults(1);">+</button>
+                        </div>
+                        <div class="stage-divider"></div>
+                        <div class="stage-details" id="stage-1-details">Waiting for task analysis...</div>
+                        <div class="stage-results" id="stage-results-1">
+                            <div id="stage-1-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 2: Code Generation -->
+                    <div class="pipeline-stage" id="stage-2">
+                        <div class="stage-header" onclick="toggleStageResults(2)">
+                            <div class="stage-icon">💻</div>
+                            <div class="stage-content">
+                                <div class="stage-title">2. Code Generation</div>
+                                <div class="stage-subtitle">Action sequence planning</div>
+                            </div>
+                            <button class="stage-expand-btn" id="expand-btn-2" onclick="event.stopPropagation(); toggleStageResults(2);">+</button>
+                        </div>
+                        <div class="stage-divider"></div>
+                        <div class="stage-details" id="stage-2-details">Code generation pending</div>
+                        <div class="stage-results" id="stage-results-2">
+                            <div id="stage-2-content"></div>
+                        </div>
+                    </div>
+
+                    <!-- Stage 3: Task Execution -->
+                    <div class="pipeline-stage" id="stage-3">
+                        <div class="stage-header" onclick="toggleStageResults(3)">
+                            <div class="stage-icon">🤖</div>
+                            <div class="stage-content">
+                                <div class="stage-title">3. Task Execution</div>
+                                <div class="stage-subtitle">Simulation/Execution</div>
+                            </div>
+                            <button class="stage-expand-btn" id="expand-btn-3" onclick="event.stopPropagation(); toggleStageResults(3);">+</button>
+                        </div>
+                        <div class="stage-divider"></div>
+                        <div class="stage-details" id="stage-3-details">Execution pending</div>
+                        <div class="stage-results" id="stage-results-3">
+                            <div id="stage-3-content"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Reset stage results data
+            stageResultsData = {};
+        }
+
+        // Load available models on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadAvailableModels();
+            initializeLayoutSelector();
+            initializeRobotSkills();
+            loadSceneObjects();
+        });
+
+        // Load available models from backend
+        async function loadAvailableModels() {
+            try {
+                const response = await fetch('/models');
+                const data = await response.json();
+
+                const modelSelect = document.getElementById('model-select');
+                modelSelect.innerHTML = ''; // Clear loading option
+
+                // Populate dropdown with available models
+                Object.entries(data.models).forEach(([modelId, modelInfo]) => {
+                    const option = document.createElement('option');
+                    option.value = modelId;
+                    const displayName = modelInfo.display_name === 'GPT-4O' ? 'GPT-4o' : modelInfo.display_name;
+                    option.textContent = displayName;
+                    modelSelect.appendChild(option);
+                });
+
+                // Set default selection to gpt-4o
+                if (data.models['gpt-4o']) {
+                    modelSelect.value = 'gpt-4o';
+                }
+
+                console.log(`Loaded ${Object.keys(data.models).length} available models`);
+
+            } catch (error) {
+                console.error('Failed to load models:', error);
+                const modelSelect = document.getElementById('model-select');
+                modelSelect.innerHTML = '<option value="gpt-4o">GPT-4O (default)</option>';
+            }
+        }
+
+        // Load example tasks
+        // Initialize Layout Selector
+        function initializeLayoutSelector() {
+            const layoutSelect = document.getElementById('layout-select');
+            for (let i = 1; i <= 30; i++) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = `Layout ${i}`;
+                layoutSelect.appendChild(option);
+            }
+
+            // Room type change listener
+            document.getElementById('room-type-select').addEventListener('change', function() {
+                loadSceneObjects();  // Reload objects for new room type
+            });
+
+            document.getElementById('layout-select').addEventListener('change', function() {
+                loadSceneObjects();  // Reload objects for new layout
+            });
+        }
+
+        // Calculate Floor Plan Number
+        function calculateFloorPlan() {
+            const roomType = document.getElementById('room-type-select').value;
+            const layout = parseInt(document.getElementById('layout-select').value);
+
+            const roomOffsets = {
+                'kitchen': 0,
+                'living': 200,
+                'bedroom': 300,
+                'bathroom': 400
+            };
+
+            return roomOffsets[roomType] + layout;
+        }
+
+        // Initialize Robot Skills Panel
+        function initializeRobotSkills() {
+            const skills = [
+                { id: 'GoToObject', name: 'Go To Object', enabled: true },
+                { id: 'PickupObject', name: 'Pickup Object', enabled: true },
+                { id: 'PutObject', name: 'Put Object', enabled: true },
+                { id: 'OpenObject', name: 'Open Object', enabled: true },
+                { id: 'CloseObject', name: 'Close Object', enabled: true },
+                { id: 'SliceObject', name: 'Slice Object', enabled: true },
+                { id: 'BreakObject', name: 'Break Object', enabled: true },
+                { id: 'SwitchOn', name: 'Switch On', enabled: true },
+                { id: 'SwitchOff', name: 'Switch Off', enabled: true },
+                { id: 'ThrowObject', name: 'Throw Object', enabled: true },
+                { id: 'PushObject', name: 'Push Object', enabled: true },
+                { id: 'PullObject', name: 'Pull Object', enabled: true }
+            ];
+
+            const skillsList = document.getElementById('robot-skills-list');
+            skillsList.innerHTML = '';
+
+            skills.forEach(skill => {
+                const skillItem = document.createElement('div');
+                skillItem.className = 'skill-item';
+                skillItem.innerHTML = `
+                    <span style="color: var(--text-primary);">${skill.name}</span>
+                    <div class="skill-toggle ${skill.enabled ? 'active' : ''}"
+                         data-skill="${skill.id}"
+                         onclick="toggleSkill('${skill.id}', this)">
+                        <div class="skill-toggle-slider"></div>
+                    </div>
+                `;
+                skillsList.appendChild(skillItem);
+            });
+        }
+
+        // Toggle Skill
+        function toggleSkill(skillId, element) {
+            element.classList.toggle('active');
+        }
+
+        // Get Disabled Skills
+        function getDisabledSkills() {
+            const disabledSkills = [];
+            document.querySelectorAll('.skill-toggle:not(.active)').forEach(toggle => {
+                disabledSkills.push(toggle.dataset.skill);
+            });
+            return disabledSkills;
+        }
+
+        // Load Scene Objects
+        async function loadSceneObjects() {
+            const floorPlan = calculateFloorPlan();
+            const objectsList = document.getElementById('scene-objects-list');
+
+            try {
+                const response = await fetch(`/get_scene_objects?floor_plan=${floorPlan}`);
+                const data = await response.json();
+
+                if (data.objects && data.objects.length > 0) {
+                    currentSceneObjects = data.objects;
+                    currentFloorPlan = floorPlan;
+
+                    console.log(`[Scene Objects] Cached ${currentSceneObjects.length} objects for FloorPlan${floorPlan}`);
+
+                    objectsList.innerHTML = '';
+
+                    // Group objects by type for better display
+                    const objectGroups = {};
+                    data.objects.forEach(obj => {
+                        if (!objectGroups[obj]) {
+                            objectGroups[obj] = 0;
+                        }
+                        objectGroups[obj]++;
+                    });
+
+                    Object.entries(objectGroups).sort().forEach(([objType, count]) => {
+                        const objectItem = document.createElement('div');
+                        objectItem.className = 'object-item';
+                        objectItem.innerHTML = `
+                            <input type="checkbox"
+                                   class="object-checkbox"
+                                   data-object="${objType}"
+                                   checked>
+                            <span style="color: var(--text-primary);">${objType} ${count > 1 ? `(${count})` : ''}</span>
+                        `;
+                        objectsList.appendChild(objectItem);
+                    });
+                } else {
+                    currentSceneObjects = [];
+                    objectsList.innerHTML = '<div style="color: var(--text-secondary);">No objects found in scene</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load scene objects:', error);
+                currentSceneObjects = []; 
+                objectsList.innerHTML = '<div style="color: var(--error-color);">Failed to load objects</div>';
+            }
+        }
+
+        // Reset Scene Objects
+        function resetSceneObjects() {
+            document.querySelectorAll('.object-checkbox').forEach(checkbox => {
+                checkbox.checked = true;
+            });
+        }
+
+        // Apply Scene Changes
+        async function applySceneChanges() {
+            const floorPlan = calculateFloorPlan();
+            const removedObjects = [];
+
+            document.querySelectorAll('.object-checkbox:not(:checked)').forEach(checkbox => {
+                removedObjects.push(checkbox.dataset.object);
+            });
+
+            try {
+                const response = await fetch('/update_scene_objects', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        floor_plan: floorPlan,
+                        removed_objects: removedObjects
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification('Scene objects updated successfully', 'success');
+                } else {
+                    showNotification('Failed to update scene objects', 'error');
+                }
+            } catch (error) {
+                console.error('Failed to apply scene changes:', error);
+                showNotification('Error updating scene objects', 'error');
+            }
+        }
+
+        // Toggle Panel
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            const arrow = document.getElementById(panelId + '-arrow');
+
+            if (panel.style.display === 'none') {
+                panel.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                panel.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Show Notification
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 12px 20px;
+                background: ${type === 'success' ? '#10b981' : '#ef4444'};
+                color: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        function loadExample(type) {
+            document.querySelectorAll('.btn-example').forEach(btn => btn.classList.remove('active'));
+
+            const examples = {
+                safe: "Put the apple in the fridge",
+                unsafe: "Store the cellphone safely in the fridge"
+            };
+
+            document.getElementById('task-input').value = examples[type];
+            document.getElementById('scene-input').value = "";
+
+            event.target.classList.add('active');
+        }
+
+        // Toggle stage results display
+        function toggleStageResults(stageNum) {
+            const resultsDiv = document.getElementById(`stage-results-${stageNum}`);
+            const expandBtn = document.getElementById(`expand-btn-${stageNum}`);
+
+            if (resultsDiv.classList.contains('expanded')) {
+                resultsDiv.classList.remove('expanded');
+                expandBtn.textContent = '+';
+            } else {
+                resultsDiv.classList.add('expanded');
+                expandBtn.textContent = '−';
+
+                if (stageResultsData[stageNum]) {
+                    populateStageResults(stageNum, stageResultsData[stageNum]);
+                }
+            }
+        }
+
+        // Process task through the pipeline
+        async function processTask() {
+            const task = document.getElementById('task-input').value;
+            const scene = document.getElementById('scene-input').value;
+            const selectedModel = document.getElementById('model-select').value;
+            const floorPlan = calculateFloorPlan();
+            const disabledSkills = getDisabledSkills();
+            const generateCode = true; // Enable full pipeline
+
+            if (!task.trim()) {
+                showStatusMessage("Please enter a task description to analyze.", 'warning');
+                return;
+            }
+
+            // Validate that floor plan hasn't changed since objects were loaded
+            if (currentFloorPlan !== floorPlan) {
+                console.warn(`[Scene Objects] Floor plan mismatch: cached=${currentFloorPlan}, current=${floorPlan}. Reloading...`);
+                await loadSceneObjects();
+            }
+
+            // Get currently available objects (respecting user's checkbox selections)
+            const availableObjects = [];
+            document.querySelectorAll('.object-checkbox:checked').forEach(checkbox => {
+                availableObjects.push(checkbox.dataset.object);
+            });
+
+            // Reset and start processing
+            resetPipeline();
+            showStatusMessage("Analyzing task safety through 6-stage neurosymbolic pipeline...", 'processing');
+
+            // Show processing indicator under button
+            document.getElementById('processing-indicator').style.display = 'block';
+
+            // Disable button during processing
+            const btn = document.getElementById('process-btn');
+            btn.disabled = true;
+
+            // Process through backend
+
+            try {
+                setStageActive(1);
+
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        task: task,
+                        scene: scene,
+                        model: selectedModel,
+                        floor_plan: floorPlan,
+                        disabled_skills: disabledSkills,
+                        generate_code: generateCode,
+                        mode: selectedMode,
+                        scene_objects: availableObjects.length > 0 ? availableObjects : currentSceneObjects
+                    })
+                });
+
+                const result = await response.json();
+                displayResults(result);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatusMessage("Analysis failed. Please check your connection and try again.", 'error');
+                setStageError(1);
+            } finally {
+                document.getElementById('processing-indicator').style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+
+        // Helper functions for status and stage management
+        function showStatusMessage(message, type) {
+            const statusDiv = document.getElementById('status-message');
+            const statusText = document.getElementById('status-text');
+
+            // Add spinner for processing messages
+            if (type === 'processing') {
+                statusText.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
+            } else {
+                statusText.textContent = message;
+            }
+
+            statusDiv.style.display = 'block';
+
+            // Style based on type
+            if (type === 'processing') {
+                statusDiv.style.background = '#e3f2fd';
+                statusDiv.style.borderLeftColor = 'var(--accent-primary)';
+            } else if (type === 'success') {
+                statusDiv.style.background = '#dcfce7';
+                statusDiv.style.borderLeftColor = 'var(--success)';
+            } else if (type === 'error') {
+                statusDiv.style.background = '#fef2f2';
+                statusDiv.style.borderLeftColor = 'var(--error)';
+            } else if (type === 'warning') {
+                statusDiv.style.background = '#fef3c7';
+                statusDiv.style.borderLeftColor = 'var(--warning)';
+            }
+        }
+
+        function setStageActive(stageNum) {
+            const stage = document.getElementById(`stage-${stageNum}`);
+            stage.className = 'pipeline-stage active';
+        }
+
+        function setStageSuccess(stageNum) {
+            const stage = document.getElementById(`stage-${stageNum}`);
+            stage.className = 'pipeline-stage passed';
+        }
+
+        function setStageError(stageNum) {
+            const stage = document.getElementById(`stage-${stageNum}`);
+            stage.className = 'pipeline-stage failed';
+        }
+
+        // Reset pipeline visualization
+        function resetPipeline() {
+            // Clear stored results
+            stageResultsData = {};
+
+            for (let i = 1; i <= 6; i++) {
+                const stage = document.getElementById(`stage-${i}`);
+                if (stage) {
+                    stage.className = 'pipeline-stage';
+                    const details = document.getElementById(`stage-${i}-details`);
+                    if (details) {
+                        if (i === 1) details.textContent = "Neural and symbolic safety verification pending";
+                        else if (i === 2) details.textContent = "Safety constraint generation pending";
+                        else if (i === 3) details.textContent = "Environment grounding pending";
+                        else if (i === 4) details.textContent = "Code generation pending";
+                        else if (i === 5) details.textContent = "Code verification pending";
+                        else if (i === 6) details.textContent = "Execution pending";
+                    }
+
+                    // Close expanded results
+                    const resultsDiv = document.getElementById(`stage-results-${i}`);
+                    const expandBtn = document.getElementById(`expand-btn-${i}`);
+                    if (resultsDiv) {
+                        resultsDiv.classList.remove('expanded');
+                        expandBtn.textContent = '+';
+                    }
+                }
+            }
+            document.getElementById('status-message').style.display = 'none';
+        }
+
+        // Populate stage results with data
+        function populateStageResults(stageNum, data) {
+            const contentDiv = document.getElementById(`stage-${stageNum}-content`);
+            if (!contentDiv) return;
+
+            let html = '';
+
+            if (stageNum === 1 && data.stages?.safety) {
+                const decision = data.stages.safety.passed ? 'VALIDATED' : 'REJECTED';
+                const confidence = (data.stages.safety.neural_confidence * 100).toFixed(0);
+
+                html += '<div class="result-container">';
+
+                // Calculate acceptance ratio for similar examples
+                let acceptanceRatio = '0%';
+                if (data.stages.safety.nearest_neighbors && data.stages.safety.nearest_neighbors.length > 0) {
+                    const safeCount = data.stages.safety.nearest_neighbors.filter(n => n.label === 'safe').length;
+                    const total = data.stages.safety.nearest_neighbors.length;
+                    acceptanceRatio = `${Math.round((safeCount / total) * 100)}%`;
+                }
+
+                // Primary Decision Status
+                html += '<div class="decision-overview">';
+                html += `<div class="decision-status ${decision === 'VALIDATED' ? 'approved' : 'rejected'}">${decision}</div>`;
+                html += `<div class="confidence-display">Neural Confidence: ${confidence}%</div>`;
+                html += `<div style="font-size: 16px; color: var(--text-primary); line-height: 1.5;">${data.stages.safety.explanation}</div>`;
+                html += '</div>';
+
+                // Analysis Breakdown Table
+                html += '<div class="analysis-grid">';
+
+                // I. Neural Analysis Card (with integrated danger detection)
+                html += '<div class="analysis-card">';
+                html += '<div class="analysis-card-header">I. Neural Network Analysis</div>';
+                html += '<div class="analysis-card-content">';
+
+                // Get danger analysis data
+                const danger = data.stages.safety.danger_analysis;
+                const conf = data.stages.safety.neural_confidence || 0;
+                const symbolicResult = data.stages.safety.symbolic || data.stages.safety.decision;
+
+                // 1. DANGER WARNING FIRST (only if detected AND task is REJECTED)
+                if (danger && danger.danger_detected && symbolicResult === 'REJECT') {
+                    html += '<div style="margin-bottom: 16px; padding: 12px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">';
+                    html += '<strong style="color: #856404;">⚠️ Danger Pattern Analysis</strong><br>';
+
+                    // Only show detected patterns if we actually found matching danger objects
+                    const hasPatterns = (danger.detected_objects && danger.detected_objects.length > 0) ||
+                                       (danger.detected_entities && danger.detected_entities.length > 0) ||
+                                       (danger.detected_actions && danger.detected_actions.length > 0);
+
+                    if (hasPatterns) {
+                        html += '<span style="font-size: 14px; color: #856404;">Detected Patterns:</span><br>';
+
+                        if (danger.detected_objects && danger.detected_objects.length > 0) {
+                            html += `<span style="margin-left: 8px; font-size: 14px; color: #856404;">• Dangerous Object: ${danger.detected_objects.join(', ')}</span><br>`;
+                        }
+                        if (danger.detected_entities && danger.detected_entities.length > 0) {
+                            html += `<span style="margin-left: 8px; font-size: 14px; color: #856404;">• Vulnerable Entity: ${danger.detected_entities.join(', ')}</span><br>`;
+                        }
+                        if (danger.detected_actions && danger.detected_actions.length > 0) {
+                            html += `<span style="margin-left: 8px; font-size: 14px; color: #856404;">• Dangerous Action: ${danger.detected_actions.join(', ')}</span><br>`;
+                        }
+                        html += '<br>';
+                    }
+
+                    html += '<span style="font-size: 14px; color: #856404;">Danger Assessment:</span><br>';
+                    if (danger.data_driven_score > 0) {
+                        html += `<span style="margin-left: 8px; font-size: 14px; color: #856404;">• Data-Driven Score: ${danger.data_driven_score.toFixed(2)}</span><br>`;
+                    }
+                    if (danger.zero_shot_score > 0) {
+                        html += `<span style="margin-left: 8px; font-size: 14px; color: #856404;">• Zero-Shot Classification: ${danger.zero_shot_score.toFixed(2)}${danger.primary_hazard ? ' (' + danger.primary_hazard + ')' : ''}</span><br>`;
+                    }
+                    html += `<span style="margin-left: 8px; font-size: 14px; color: #856404;">• Combined Danger Score (Max): ${danger.danger_score.toFixed(2)}</span>`;
+                    html += '</div>';
+                }
+
+                // 2. CONFIDENCE (always shown)
+                let safe_conf, unsafe_conf;
+                if (symbolicResult === 'REJECT') {
+                    // Rejected task: confidence represents unsafe probability
+                    unsafe_conf = Math.round(conf * 100);
+                    safe_conf = Math.round((1 - conf) * 100);
+                } else {
+                    // Accepted task: confidence represents safe probability
+                    safe_conf = Math.round(conf * 100);
+                    unsafe_conf = Math.round((1 - conf) * 100);
+                }
+                html += `<strong>Model Confidence:</strong> ${safe_conf}% safe / ${unsafe_conf}% unsafe<br><br>`;
+
+                // 3. PRIMARY EXAMPLES (if they exist)
+                const examples = data.stages.safety.nearest_neighbors || [];
+                if (examples.length > 0) {
+                    const labelType = examples[0].label === 'safe' ? 'Safe' : 'Unsafe';
+                    html += `<strong>Most Similar ${labelType} Tasks from Training Data:</strong><br>`;
+                    examples.forEach(ex => {
+                        const icon = ex.label === 'safe' ? '✓' : '✗';
+                        const color = ex.label === 'safe' ? '#16a34a' : '#dc2626';
+                        const labelText = ex.label === 'safe' ? 'SAFE' : 'UNSAFE';
+                        html += `<span style="color: ${color};">${icon} ${labelText}</span> "${ex.task}" (similarity: ${ex.similarity.toFixed(2)})<br>`;
+                    });
+                }
+
+                // 4. CONTRASTING EXAMPLES (only for high-danger tasks)
+                const contrasting = data.stages.safety.contrasting_examples || [];
+                if (contrasting.length > 0) {
+                    html += '<br><strong>Contrastive Examples (Safe prompts):</strong><br>';
+                    contrasting.forEach(ex => {
+                        html += `<span style="color: #16a34a;">✓ SAFE</span> "${ex.task}" (similarity: ${ex.similarity.toFixed(2)})<br>`;
+                    });
+                }
+
+                html += '</div>';
+                html += '</div>';
+
+                // II. Symbolic Logic Card (Three Layers - Society, Organization, Individual)
+                html += '<div class="analysis-card">';
+                html += '<div class="analysis-card-header">II. Symbolic Logic Verification</div>';
+                html += '<div class="analysis-card-content">';
+
+                // Extract REAL layer results from symbolic_trace
+                const trace = data.stages.safety?.symbolic_trace || {};
+                const sortsAndValues = trace.sorts_and_values || '';
+                const conflictMatrix = trace.conflict_matrix || '';
+                const societalResult = trace.societal?.result || 'UNKNOWN';
+                const societalReasoning = trace.societal?.reasoning || '';
+                const organizationalResult = trace.organizational?.result || 'UNKNOWN';
+                const organizationalReasoning = trace.organizational?.reasoning || '';
+                const individualResult = trace.individual?.result || 'UNKNOWN';
+                const individualReasoning = trace.individual?.reasoning || '';
+
+                // Show Sorts and Values if available
+                if (sortsAndValues) {
+                    html += `<div style="margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-left: 4px solid #6c757d; border-radius: 4px;">`;
+                    html += `<strong style="display: block; margin-bottom: 8px; color: #495057;">Sorts and Values:</strong>`;
+                    html += `<pre style="margin: 0; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: #212529;">${sortsAndValues}</pre>`;
+                    html += `</div>`;
+                }
+
+                // Layer 1 - Societal
+                html += `<div style="margin-bottom: 12px;">`;
+                html += `<strong>Layer 1 - Society:</strong> <span style="color: ${societalResult === 'PERMISSIBLE' ? 'var(--success)' : 'var(--error)'}; font-weight: 600;">${societalResult}</span>`;
+                if (societalResult !== 'PERMISSIBLE' && societalReasoning) {
+                    html += `<div style="margin-top: 8px; padding: 12px; background: #ffe6e6; border-left: 4px solid #dc3545; border-radius: 4px; font-size: 14px; line-height: 1.6;">${societalReasoning}</div>`;
+                }
+                html += `</div>`;
+
+                // Layer 2 - Organizational
+                html += `<div style="margin-bottom: 12px;">`;
+                html += `<strong>Layer 2 - Organization:</strong> <span style="color: ${organizationalResult === 'PERMISSIBLE' ? 'var(--success)' : 'var(--error)'}; font-weight: 600;">${organizationalResult}</span>`;
+                if (organizationalResult !== 'PERMISSIBLE' && organizationalReasoning) {
+                    html += `<div style="margin-top: 8px; padding: 12px; background: #ffe6e6; border-left: 4px solid #dc3545; border-radius: 4px; font-size: 14px; line-height: 1.6;">${organizationalReasoning}</div>`;
+                }
+                html += `</div>`;
+
+                // Layer 3 - Individual
+                html += `<div style="margin-bottom: 12px;">`;
+                html += `<strong>Layer 3 - Individual:</strong> <span style="color: ${individualResult === 'PERMISSIBLE' ? 'var(--success)' : 'var(--error)'}; font-weight: 600;">${individualResult}</span>`;
+                if (individualResult !== 'PERMISSIBLE' && individualReasoning) {
+                    html += `<div style="margin-top: 8px; padding: 12px; background: #ffe6e6; border-left: 4px solid #dc3545; border-radius: 4px; font-size: 14px; line-height: 1.6;">${individualReasoning}</div>`;
+                }
+                html += `</div>`;
+
+                // Show Conflict Matrix if available
+                if (conflictMatrix) {
+                    html += `<div style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-left: 4px solid #6c757d; border-radius: 4px;">`;
+                    html += `<strong style="display: block; margin-bottom: 8px; color: #495057;">Alignment Conflict Matrix:</strong>`;
+                    html += `<div style="overflow-x: auto; scrollbar-width: thin; scrollbar-color: #adb5bd #f8f9fa;">`;
+                    html += `<pre style="margin: 0; font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.6; white-space: pre; color: #212529;">${conflictMatrix}</pre>`;
+                    html += `</div>`;
+                    html += `</div>`;
+                }
+
+                html += '</div>';
+                html += '</div>';
+
+                html += '</div>';
+
+                // III. Neurosymbolic Decision Fusion section
+                html += '<div style="margin-top: 24px; padding: 16px; background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 8px;">';
+                html += '<h6 style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;">III. Neurosymbolic Decision Fusion</h6>';
+
+                // Create symbolic result shorthand based on REAL layer results
+                const symShort1 = societalResult === 'PERMISSIBLE' ? 'P' : (societalResult === 'FORBIDDEN' ? 'F' : '?');
+                const symShort2 = organizationalResult === 'PERMISSIBLE' ? 'P' : (organizationalResult === 'FORBIDDEN' ? 'F' : '?');
+                const symShort3 = individualResult === 'PERMISSIBLE' ? 'P' : (individualResult === 'FORBIDDEN' ? 'F' : '?');
+                const symbolicShorthand = `(${symShort1},${symShort2},${symShort3})`;
+
+                // Calculate symbolic decision based on the actual layer results
+                // According to the FCM matrix: (P,P,P) = Accept, any F typically = Reject
+                const allPermissible = (symShort1 === 'P' && symShort2 === 'P' && symShort3 === 'P');
+                const symbolicDecision = allPermissible ? 'Accept' : 'Reject';
+
+                // Get the actual symbolic result from data if available
+                const actualSymbolicResult = data.stages.safety.symbolic_result || (allPermissible ? 'ACCEPT' : 'REJECT');
+                const symbolicDecisionFinal = actualSymbolicResult === 'ACCEPT' ? 'Accept' : 'Reject';
+
+                // Convert confidence to decimal
+                const neuralDecimal = (parseFloat(confidence) / 100).toFixed(2);
+
+                html += `<div style="margin-bottom: 8px;"><strong>1) Symbolic:</strong> ${symbolicDecisionFinal} ${symbolicShorthand}</div>`;
+                html += `<div style="margin-bottom: 8px;"><strong>2) Neural:</strong> ${neuralDecimal}</div>`;
+                html += `<div style="margin-bottom: 8px;"><strong>3) Final Decision:</strong> <span style="color: ${decision === 'VALIDATED' ? 'var(--success)' : 'var(--error)'}; font-weight: 600;">${decision}</span></div>`;
+                html += '</div>';
+
+                html += '</div>';
+
+
+            } else if (stageNum === 2 && data.mode === 'base_llm' && data.stages?.code_generation) {
+                // Base LLM Stage 2: Code Generation
+                html += '<div class="analysis-grid">';
+                html += '<div class="analysis-card">';
+                html += '<div class="analysis-card-header">I. Generated Robot Execution Code</div>';
+                html += '<div class="analysis-card-content">';
+                html += '<div class="code-block"><pre>' + data.stages.code_generation.code + '</pre></div>';
+                html += '</div>';
+                html += '</div>';
+                html += '</div>';
+
+            } else if (stageNum === 2 && data.stages?.invariants) {
+                // NERT Stage 2: Invariants
+                html += '<div class="analysis-grid">';
+
+                if (data.stages.invariants.pddl_preconditions && data.stages.invariants.pddl_preconditions.length > 0) {
+                    html += '<div class="analysis-card">';
+                    html += '<div class="analysis-card-header">I. PDDL Preconditions</div>';
+                    html += '<div class="analysis-card-content">';
+                    data.stages.invariants.pddl_preconditions.forEach(pre => {
+                        html += `<div style="margin-bottom: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-family: monospace;">${pre}</div>`;
+                    });
+                    html += '</div></div>';
+                }
+
+                if (data.stages.invariants.pddl_postconditions && data.stages.invariants.pddl_postconditions.length > 0) {
+                    html += '<div class="analysis-card">';
+                    html += '<div class="analysis-card-header">II. PDDL Postconditions</div>';
+                    html += '<div class="analysis-card-content">';
+                    data.stages.invariants.pddl_postconditions.forEach(post => {
+                        html += `<div style="margin-bottom: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-family: monospace;">${post}</div>`;
+                    });
+                    html += '</div></div>';
+                }
+
+                if (data.stages.invariants.ltl_invariants && data.stages.invariants.ltl_invariants.length > 0) {
+                    html += '<div class="analysis-card">';
+                    html += '<div class="analysis-card-header">III. Linear Temporal Logic (LTL) Properties</div>';
+                    html += '<div class="analysis-card-content">';
+                    data.stages.invariants.ltl_invariants.forEach(inv => {
+                        html += `<div style="margin-bottom: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-family: monospace;">${inv}</div>`;
+                    });
+                    html += '</div></div>';
+                }
+
+                if (data.stages.invariants.stl_constraints && data.stages.invariants.stl_constraints.length > 0) {
+                    html += '<div class="analysis-card">';
+                    html += '<div class="analysis-card-header">IV. Signal Temporal Logic (STL) Constraints</div>';
+                    html += '<div class="analysis-card-content">';
+                    data.stages.invariants.stl_constraints.forEach(stl => {
+                        html += `<div style="margin-bottom: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-family: monospace;">${stl}</div>`;
+                    });
+                    html += '</div></div>';
+                }
+
+                // LLM Contextual a full structured response (string)
+                if (data.stages.invariants.llm_contextual && typeof data.stages.invariants.llm_contextual === 'string') {
+                    html += '<div class="analysis-card" style="grid-column: span 2;">';
+                    html += '<div class="analysis-card-header">V. LLM Contextual Safety Analysis</div>';
+                    html += '<div class="analysis-card-content">';
+                    // Display the full structured markdown response with proper formatting
+                    const formattedContent = data.stages.invariants.llm_contextual
+                        .replace(/\n/g, '<br>')
+                        .replace(/###\s+(.+?)<br>/g, '<h4 style="margin-top: 16px; margin-bottom: 8px; color: var(--text-primary);">$1</h4>')
+                        .replace(/##\s+(.+?)<br>/g, '<h3 style="margin-top: 20px; margin-bottom: 12px; color: var(--text-primary);">$1</h3>')
+                        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/`(.+?)`/g, '<code style="background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-family: monospace;">$1</code>')
+                        .replace(/^\*\s+(.+?)(<br>|$)/gm, '<li style="margin-left: 20px;">$1</li>');
+                    html += `<div style="line-height: 1.8; color: var(--text-secondary);">${formattedContent}</div>`;
+                    html += '</div></div>';
+                }
+
+                // Fallback message if no invariants are generated
+                if (!html.includes('analysis-card-header')) {
+                    html += '<div class="analysis-card">';
+                    html += '<div class="analysis-card-header">No Invariants Generated</div>';
+                    html += '<div class="analysis-card-content">';
+                    html += 'No specific safety invariants were generated for this task.';
+                    html += '</div></div>';
+                }
+
+                html += '</div>';
+
+            } else if (stageNum === 3 && data.stages?.grounding) {
+                // Stage 3: Grounding
+                html += '<div class="result-container">';
+
+                // Primary Status Overview
+                html += '<div class="decision-overview">';
+                const groundingStatus = data.stages.grounding.passed ? 'ENVIRONMENT READY' : 'RESOURCES MISSING';
+                html += `<div class="decision-status ${data.stages.grounding.passed ? 'approved' : 'rejected'}">${groundingStatus}</div>`;
+
+                // Count available vs missing resources
+                let availableCount = 0;
+                let totalCount = 0;
+                if (data.stages.grounding.details) {
+                    Object.entries(data.stages.grounding.details).forEach(([key, value]) => {
+                        // Skip metadata entries
+                        if (key.startsWith('_')) return;
+
+                        totalCount++;
+                        if (value.found) availableCount++;
+                    });
+                }
+
+                html += `<div class="confidence-display">${availableCount}/${totalCount} Resources Verified</div>`;
+                html += '</div>';
+
+                // Analysis Grid
+                html += '<div class="analysis-grid">';
+
+                // I. Scene Analysis Card
+                html += '<div class="analysis-card">';
+                html += '<div class="analysis-card-header">I. Scene Analysis</div>';
+                html += '<div class="analysis-card-content">';
+                html += `<strong>Verification Method:</strong> Hybrid semantic matching<br>`;
+
+                // Get floor plan info from metadata if available
+                const metadata = data.stages.grounding.details._metadata || {};
+                const floorPlan = metadata.floor_plan || 1;
+                const sceneKey = metadata.scene_key || 'floorplan_1';
+
+                // Determine room type from floor plan number
+                let roomType = 'Kitchen';
+                if (floorPlan >= 201 && floorPlan < 300) roomType = 'Living Room';
+                else if (floorPlan >= 301 && floorPlan < 400) roomType = 'Bedroom';
+                else if (floorPlan >= 401 && floorPlan < 500) roomType = 'Bathroom';
+
+                html += `<strong>Scene Type:</strong> ${roomType} (FloorPlan${floorPlan})<br>`;
+                html += `<strong>Total Resources Required:</strong> ${totalCount}`;
+                html += '</div>';
+                html += '</div>';
+
+                // II. Resource Verification Card
+                html += '<div class="analysis-card">';
+                html += '<div class="analysis-card-header">II. Resource Verification</div>';
+                html += '<div class="analysis-card-content">';
+                if (data.stages.grounding.details) {
+                    Object.entries(data.stages.grounding.details).forEach(([key, value]) => {
+                        // Skip metadata entry
+                        if (key === '_metadata') return;
+
+                        const statusIcon = value.found ? '<span style="color: #16a34a;">✓</span>' : '<span style="color: #dc2626;">✗</span>';
+                        const confidence = value.confidence ? ` (${(value.confidence * 100).toFixed(0)}% match)` : '';
+                        const matchedTo = value.matched_to ? ` → ${value.matched_to}` : '';
+
+                        // Better display for skills
+                        const displayKey = key.startsWith('skill_') ? `Skill: ${key.replace('skill_', '')}` : key;
+
+                        html += `${statusIcon} <strong>${displayKey}</strong>${matchedTo}${confidence}<br>`;
+                    });
+                }
+                html += '</div>';
+                html += '</div>';
+
+                html += '</div>';
+
+                // III. Grounding Decision
+                html += '<div style="margin-top: 24px; padding: 16px; background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 8px;">';
+                html += '<h6 style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;">III. Grounding Decision</h6>';
+
+                const matchingMethod = data.stages.grounding.details && Object.values(data.stages.grounding.details).some(v => v.method === 'hybrid_match') ? 'Hybrid (Embedding + LLM)' : 'Embedding-based';
+
+                html += `<div style="margin-bottom: 8px;"><strong>1) Matching Method:</strong> ${matchingMethod}</div>`;
+                html += `<div style="margin-bottom: 8px;"><strong>2) Availability Rate:</strong> ${((availableCount/totalCount) * 100).toFixed(0)}%</div>`;
+                html += `<div style="margin-bottom: 8px;"><strong>3) Final Decision:</strong> <span style="color: ${data.stages.grounding.passed ? 'var(--success)' : 'var(--error)'}; font-weight: 600;">${data.stages.grounding.passed ? 'PROCEED' : 'BLOCKED'}</span></div>`;
+                html += '</div>';
+
+                html += '</div>';
+
+            } else if (stageNum === 4 && data.stages?.code_generation) {
+                // Stage 4: Code Generation
+                html += '<div class="analysis-grid">';
+
+                html += '<div class="analysis-card">';
+                html += '<div class="analysis-card-header">I. Generated Robot Execution Code</div>';
+                html += '<div class="analysis-card-content">';
+                html += '<div class="code-block"><pre>' + data.stages.code_generation.code + '</pre></div>';
+                html += '</div>';
+                html += '</div>';
+
+                html += '</div>';
+
+            } else if (stageNum === 5 && data.stages?.verification) {
+                // Stage 5: Verification
+                html += '<div class="analysis-grid">';
+
+                // I. Verification Status
+                html += '<div class="analysis-card">';
+                html += '<div class="analysis-card-header">I. Code Safety Verification Results</div>';
+                html += '<div class="analysis-card-content">';
+                html += `<span class="status ${data.stages.verification.passed ? 'success' : 'failure'}">${data.stages.verification.passed ? 'All Checks Passed' : 'Safety Violations Found'}</span>`;
+                html += '</div>';
+                html += '</div>';
+
+                // II. Detailed Results
+                if (data.stages.verification.violations && data.stages.verification.violations.length > 0) {
+                    html += '<div class="analysis-card">';
+                    html += '<div class="analysis-card-header">II. Safety Violations Detected</div>';
+                    html += '<div class="analysis-card-content">';
+                    data.stages.verification.violations.forEach((violation, index) => {
+                        html += `<div style="margin-bottom: 8px; padding: 8px; background: #fef2f2; border-left: 4px solid #dc2626; border-radius: 4px;">${index + 1}. ${violation}</div>`;
+                    });
+                    html += '</div>';
+                    html += '</div>';
+                } else if (data.stages.verification.passed) {
+                    html += '<div class="analysis-card">';
+                    html += '<div class="analysis-card-header">II. Verification Result</div>';
+                    html += '<div class="analysis-card-content">';
+                    html += '<div style="padding: 8px; background: #f0f9ff; border-left: 4px solid #16a34a; border-radius: 4px;">No safety violations detected in generated code.</div>';
+                    html += '</div>';
+                    html += '</div>';
+                }
+
+                html += '</div>';
+
+            } else if (stageNum === 6 && data.stages?.execution) {
+                // Stage 6: Execution
+                html += '<div class="analysis-grid">';
+
+                // Card I: Execution Status
+                html += '<div class="analysis-card">';
+                html += '<div class="analysis-card-header">I. AI2-THOR Execution Status</div>';
+                html += '<div class="analysis-card-content">';
+                if (data.stages.execution.passed) {
+                    html += '<div class="verdict-box" style="background: rgba(16, 185, 129, 0.1); border: 2px solid #10b981;">';
+                    html += '<div class="verdict-label">✅ Successfully Completed</div>';
+                    html += '<div class="verdict-description">Task executed without errors</div>';
+                    html += '</div>';
+                } else {
+                    html += '<div class="verdict-box" style="background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444;">';
+                    html += '<div class="verdict-label">❌ Execution Failed</div>';
+                    html += '<div class="verdict-description">Runtime error occurred</div>';
+                    html += '</div>';
+                }
+                html += '</div></div>';
+
+                // Card II: Execution Details
+                if (data.stages.execution.details) {
+                    html += '<div class="analysis-card">';
+                    html += '<div class="analysis-card-header">II. Execution Details</div>';
+                    html += '<div class="analysis-card-content">';
+                    html += `<div style="padding: 12px; background: var(--bg-primary); border-radius: 6px;">${data.stages.execution.details}</div>`;
+                    html += '</div></div>';
+                }
+
+                // Card III: Progress Summary
+                if (data.stages.execution.steps_executed !== undefined) {
+                    html += '<div class="analysis-card">';
+                    html += '<div class="analysis-card-header">III. Progress Summary</div>';
+                    html += '<div class="analysis-card-content">';
+                    const percentage = Math.round((data.stages.execution.steps_executed / data.stages.execution.total_steps) * 100);
+                    html += `<div><strong>Steps Completed:</strong> ${data.stages.execution.steps_executed}/${data.stages.execution.total_steps} (${percentage}%)</div>`;
+                    html += '<div style="margin-top: 8px; background: var(--bg-secondary); border-radius: 8px; height: 20px; overflow: hidden;">';
+                    html += `<div style="background: ${data.stages.execution.passed ? '#10b981' : '#f59e0b'}; height: 100%; width: ${percentage}%;"></div>`;
+                    html += '</div>';
+                    html += '</div></div>';
+                }
+
+                // Card IV: Environment Screenshot
+                if (data.stages.execution.ai2thor_screenshot) {
+                    html += '<div class="analysis-card" style="grid-column: span 2;">';
+                    html += '<div class="analysis-card-header">IV. Environment Screenshot</div>';
+                    html += '<div class="analysis-card-content" style="text-align: center;">';
+                    html += `<img src="/static/screenshots/${data.stages.execution.ai2thor_screenshot}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" alt="AI2-THOR Result">`;
+                    html += '<div style="margin-top: 8px; color: var(--text-tertiary); font-size: 12px;">Final state after execution</div>';
+                    html += '</div></div>';
+                }
+
+                // Card V: Execution Videos (if available)
+                if (data.stages.execution.video && data.stages.execution.video.videos) {
+                    html += '<div class="analysis-card" style="grid-column: span 2;">';
+                    html += '<div class="analysis-card-header">V. Execution Videos</div>';
+                    html += '<div class="analysis-card-content">';
+
+                    const video = data.stages.execution.video;
+                    const sessionId = video.session_id;
+
+                    // Display composite video if available
+                    const compositeVideo = video.videos.find(v => v.includes('composite.mp4'));
+                    if (compositeVideo) {
+                        html += '<div style="margin-bottom: 20px;">';
+                        html += '<h4 style="color: var(--text-secondary); margin-bottom: 10px;">Multi-View Composite</h4>';
+                        html += `<video controls style="width: 100%; max-width: 800px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
+                        html += `<source src="/static/videos/${sessionId}/composite.mp4" type="video/mp4">`;
+                        html += 'Your browser does not support the video tag.';
+                        html += '</video>';
+                        html += '</div>';
+                    }
+
+                    // Display individual view videos
+                    const individualVideos = video.videos.filter(v => !v.includes('composite.mp4'));
+                    if (individualVideos.length > 0) {
+                        html += '<div style="margin-top: 20px;">';
+                        html += '<h4 style="color: var(--text-secondary); margin-bottom: 10px;">Individual Views</h4>';
+                        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">';
+
+                        individualVideos.forEach(videoPath => {
+                            const viewName = videoPath.split('/').pop().replace('.mp4', '').replace('_', ' ');
+                            html += '<div>';
+                            html += `<h5 style="text-transform: capitalize; color: var(--text-tertiary); margin-bottom: 5px;">${viewName}</h5>`;
+                            html += `<video controls style="width: 100%; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">`;
+                            html += `<source src="/static/videos/${sessionId}/${videoPath.split('/').pop()}" type="video/mp4">`;
+                            html += '</video>';
+                            html += '</div>';
+                        });
+
+                        html += '</div>';
+                        html += '</div>';
+                    }
+
+                    // Display video metadata
+                    html += `<div style="margin-top: 15px; padding: 10px; background: var(--bg-primary); border-radius: 6px;">`;
+                    html += `<small style="color: var(--text-tertiary);">`;
+                    html += `Duration: ${video.duration?.toFixed(1)}s | `;
+                    html += `Frames: ${video.total_frames} | `;
+                    html += `Views: ${video.videos.length} videos`;
+                    html += `</small>`;
+                    html += '</div>';
+
+                    html += '</div></div>';
+                }
+
+                // Error Card (if any)
+                if (data.stages.execution.error) {
+                    html += '<div class="analysis-card" style="grid-column: span 2;">';
+                    html += '<div class="analysis-card-header" style="color: #ef4444;">⚠️ Error Details</div>';
+                    html += '<div class="analysis-card-content">';
+                    html += `<div style="padding: 12px; background: rgba(239, 68, 68, 0.05); border: 1px solid #ef4444; border-radius: 6px; color: #dc2626;">${data.stages.execution.error}</div>`;
+                    html += '</div></div>';
+                }
+
+                html += '</div>'; // Close analysis-grid
+            }
+
+            contentDiv.innerHTML = html;
+        }
+
+        // Display pipeline results with enhanced formatting
+        function displayResults(result) {
+            // MODE-SPECIFIC DISPLAY
+            if (result.mode === 'base_llm') {
+                displayBaseLLMResults(result);
+                return;
+            }
+
+            // NERT MODE (original display logic)
+            // Store results data for each stage
+            if (result.stages.safety) stageResultsData[1] = result;
+            if (result.stages.invariants) stageResultsData[2] = result;
+            if (result.stages.grounding) stageResultsData[3] = result;
+            if (result.stages.code_generation) stageResultsData[4] = result;
+            if (result.stages.verification) stageResultsData[5] = result;
+            if (result.stages.execution) stageResultsData[6] = result;
+
+            // Stage 1: Safety Check
+            if (result.stages.safety) {
+                if (result.stages.safety.passed) {
+                    setStageSuccess(1);
+                    const confidence = (result.stages.safety.neural_confidence * 100).toFixed(0);
+
+                    // Calculate acceptance ratio like in screenshot
+                    let acceptanceText = '';
+                    if (result.stages.safety.nearest_neighbors && result.stages.safety.nearest_neighbors.length > 0) {
+                        const safeCount = result.stages.safety.nearest_neighbors.filter(n => n.label === 'safe').length;
+                        const total = result.stages.safety.nearest_neighbors.length;
+                        const acceptanceRatio = Math.round((safeCount / total) * 100);
+                        acceptanceText = `<br><small>Accepted: ${acceptanceRatio}% of similar examples are safe</small>`;
+                    }
+
+                    document.getElementById('stage-1-details').innerHTML = `
+                        ✅ Task validated (${confidence}% confidence)${acceptanceText}
+                    `;
+                    setStageActive(2);
+                } else {
+                    setStageError(1);
+                    document.getElementById('stage-1-details').innerHTML = `
+                        ❌ Safety concerns detected<br>
+                        <small>${result.stages.safety.explanation}</small>
+                    `;
+                    showStatusMessage("Task failed safety verification", 'error');
+                    return;
+                }
+            }
+
+            // Stage 2: Invariant Generation
+            if (result.stages.invariants) {
+                setStageSuccess(2);
+                // llm_contextual is a string (full structured response)
+                const totalInvariants = (result.stages.invariants.pddl_preconditions?.length || 0) +
+                                     (result.stages.invariants.pddl_postconditions?.length || 0) +
+                                     (result.stages.invariants.ltl_invariants?.length || 0) +
+                                     (result.stages.invariants.stl_constraints?.length || 0) +
+                                     (result.stages.invariants.llm_contextual ? 1 : 0); 
+
+                document.getElementById('stage-2-details').innerHTML = `
+                    ✅ Generated ${totalInvariants} safety constraint categories<br>
+                    <small>PDDL, LTL, STL, and contextual rules created</small>
+                `;
+                setStageActive(3);
+            }
+
+            // Stage 3: Grounding Verification
+            if (result.stages.grounding) {
+                if (result.stages.grounding.passed) {
+                    setStageSuccess(3);
+                    const foundObjects = Object.entries(result.stages.grounding.details || {})
+                        .filter(([k, v]) => v.found)
+                        .map(([k, v]) => k);
+
+                    document.getElementById('stage-3-details').innerHTML = `
+                        ✅ All required resources available<br>
+                        <small>Found: ${foundObjects.length > 0 ? foundObjects.join(', ') : 'All items'}</small>
+                    `;
+
+                    if (result.stages.code_generation) {
+                        setStageActive(4);
+                    } else {
+                        showStatusMessage("Task verified and ready for execution", 'success');
+                    }
+                } else {
+                    setStageError(3);
+                    document.getElementById('stage-3-details').innerHTML = `
+                        ❌ Missing required resources<br>
+                        <small>Some objects not found in environment</small>
+                    `;
+                    showStatusMessage("Cannot execute - missing required objects", 'error');
+                    return;
+                }
+            }
+
+            // Stage 4: Code Generation
+            if (result.stages.code_generation) {
+                setStageSuccess(4);
+                const codeLines = result.stages.code_generation.code.split('\n').length;
+                document.getElementById('stage-4-details').innerHTML = `
+                    ✅ Robot code generated (${codeLines} lines)<br>
+                    <small>Includes embedded safety checks</small>
+                `;
+
+                if (result.stages.verification) {
+                    setStageActive(5);
+                }
+            }
+
+            // Stage 5: Code Verification
+            if (result.stages.verification) {
+                if (result.stages.verification.passed) {
+                    setStageSuccess(5);
+                    document.getElementById('stage-5-details').innerHTML = `
+                        ✅ Code passed all safety checks<br>
+                        <small>No invariant violations detected</small>
+                    `;
+
+                    if (result.stages.execution) {
+                        setStageActive(6);
+                    } else {
+                        showStatusMessage("Task verified and ready for execution", 'success');
+                    }
+                } else {
+                    setStageError(5);
+                    const violations = result.stages.verification.violations?.length || 0;
+                    document.getElementById('stage-5-details').innerHTML = `
+                        ❌ ${violations} safety violations found<br>
+                        <small>Code does not meet safety requirements</small>
+                    `;
+                    showStatusMessage("Code verification failed", 'error');
+                }
+            } else if (result.final_status === "APPROVED_READY") {
+                showStatusMessage("Task analysis complete - safe for execution", 'success');
+            }
+
+            // Auto-activate Stage 6 if all previous stages passed
+            const allStagesPassed = (
+                result.stages.safety?.passed &&
+                result.stages.grounding?.passed &&
+                result.stages.verification?.passed
+            );
+
+            if (allStagesPassed && !result.stages.execution) {
+                // Check platform for AI2-THOR compatibility
+                const isLinux = navigator.platform.toLowerCase().includes('linux');
+                const isWindows = navigator.platform.toLowerCase().includes('win');
+
+                if (isLinux) {
+                    // On Linux, AI2-THOR works - show as ready for execution
+                    setStageSuccess(6);
+                    document.getElementById('stage-6-details').innerHTML = `
+                        ✅ Ready for AI2-THOR execution<br>
+                        <small>All safety checks passed - task ready for simulation</small>
+                    `;
+                } else if (isWindows) {
+                    // On Windows, AI2-THOR won't work but show as "would execute"
+                    setStageSuccess(6);
+                    document.getElementById('stage-6-details').innerHTML = `
+                        ✅ Execution approved (Windows simulation)<br>
+                        <small>All safety checks passed - would execute on Linux/AI2-THOR</small>
+                    `;
+                } else {
+                    // Unknown platform
+                    setStageSuccess(6);
+                    document.getElementById('stage-6-details').innerHTML = `
+                        ✅ Execution approved<br>
+                        <small>All safety checks passed - ready for execution</small>
+                    `;
+                }
+            }
+
+            // Stage 6: Task Execution (actual execution results)
+            if (result.stages.execution) {
+                if (result.stages.execution.passed) {
+                    setStageSuccess(6);
+                    document.getElementById('stage-6-details').innerHTML = `
+                        ✅ Task executed successfully<br>
+                        <small>${result.stages.execution.details || 'Completed without errors'}</small>
+                    `;
+                    showStatusMessage("Task successfully executed in AI2-THOR", 'success');
+                } else {
+                    setStageError(6);
+                    document.getElementById('stage-6-details').innerHTML = `
+                        ❌ Execution failed<br>
+                        <small>${result.stages.execution.error || 'Runtime error occurred'}</small>
+                    `;
+                    showStatusMessage("Execution failed during simulation", 'error');
+                }
+            }
+        }
+        // Display Base LLM Results (Simplified 3-stage UI)
+        function displayBaseLLMResults(result) {
+            // Hide processing indicator
+            document.getElementById('processing-indicator').style.display = 'none';
+
+            // Re-enable button
+            const btn = document.getElementById('process-btn');
+            btn.disabled = false;
+
+            const safety = result.stages.safety;
+            const codegen = result.stages.code_generation;
+            const execution = result.stages.execution;
+
+            // Stage 1: Task Analysis
+            if (safety) {
+                if (safety.decision === 'ACCEPT') {
+                    setStageSuccess(1);
+                    document.getElementById('stage-1-details').innerHTML = `
+                        <div style="padding: 12px;">
+                            <div style="margin-bottom: 8px;"><strong>A. Decision:</strong> ✅ Task Good to Assign</div>
+                            <div><strong>B. Reason:</strong> ${safety.explanation}</div>
+                        </div>
+                    `;
+                    setStageActive(2);
+                } else {
+                    setStageError(1);
+                    document.getElementById('stage-1-details').innerHTML = `
+                        <div style="padding: 12px;">
+                            <div style="margin-bottom: 8px;"><strong>A. Decision:</strong> ❌ Task Not Approved</div>
+                            <div><strong>B. Reason:</strong> ${safety.explanation}</div>
+                        </div>
+                    `;
+                    showStatusMessage("Task rejected by Base LLM", 'error');
+                    return;
+                }
+            }
+
+            // Stage 2: Code Generation
+            if (codegen && codegen.success) {
+                setStageSuccess(2);
+                const lineCount = codegen.code.split('\n').length;
+                document.getElementById('stage-2-details').innerHTML = `
+                    ✅ Code generated (${lineCount} lines)
+                `;
+
+                // Ensure stage-results div exists and populate it
+                const resultsDiv = document.getElementById('stage-results-2');
+                if (resultsDiv) {
+                    const contentDiv = document.getElementById('stage-2-content');
+                    if (contentDiv) {
+                        contentDiv.innerHTML = `
+                            <div class="analysis-grid">
+                                <div class="analysis-card">
+                                    <div class="analysis-card-header">I. Generated Robot Execution Code</div>
+                                    <div class="analysis-card-content">
+                                        <div class="code-block"><pre>${codegen.code}</pre></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                setStageActive(3);
+            } else if (codegen) {
+                setStageError(2);
+                document.getElementById('stage-2-details').innerHTML = `
+                    ❌ Code generation failed: ${codegen.error || 'Unknown error'}
+                `;
+                return;
+            }
+
+            // Stage 3: Task Execution
+            if (execution) {
+                setStageSuccess(3);
+                document.getElementById('stage-3-details').innerHTML = `
+                    ✅ ${execution.message || 'Code ready for simulation'}
+                `;
+                showStatusMessage("Base LLM pipeline completed", 'success');
+            }
+
+            // Store for modal display
+            stageResultsData[1] = result;
+            stageResultsData[2] = result;
+            stageResultsData[3] = result;
+        }
+
+        function setStageSkipped(stageNum) {
+            const stage = document.getElementById(`stage-${stageNum}`);
+            stage.classList.remove('active', 'success', 'error', 'pending');
+            stage.classList.add('skipped');
+            const progressBar = stage.querySelector('.stage-progress');
+            if (progressBar) {
+                progressBar.style.width = '100%';
+                progressBar.style.backgroundColor = '#9ca3af';
+            }
+        }
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+# nert/core/formal_rules.yaml
+"""Formal safety rules for decomposed evaluation."""
+
+societal:
+  forbidden_actions:
+    - harm
+    - injure
+    - damage
+    - destroy
+    - steal
+  
+  protected_entities:
+    - child
+    - baby
+    - infant
+    - elderly
+    - disabled
+    
+  restricted_resources:
+    - weapon
+    - drug
+    - poison
+    - explosive
+
+organizational:
+  forbidden_actions:
+    - violate_policy
+    - exceed_authority
+    - access_restricted
+  
+  role_boundaries:
+    - admin_only
+    - supervisor_required
+    - human_approval_needed
+
+individual:
+  harm_indicators:
+    - hot_liquid_near_child
+    - sharp_object_unsupervised
+    - choking_hazard
+    - allergen_exposure
+  
+  capability_limits:
+    - child_cannot_handle_hot
+    - infant_cannot_eat_solid
+    - elderly_mobility_limited

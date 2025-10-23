@@ -1,0 +1,38 @@
+# NERT Configuration File
+
+# LLM Settings
+llm:
+  model: gemini-2.0-flash #"gpt-4o"  # Available: gpt-4o, gpt-4-turbo, gpt-3.5-turbo, gemini-2.0-flash, etc.
+  temperature: 0.0
+  max_tokens: 2000
+  api_key_env: GOOGLE_API_KEY #"OPENAI_API_KEY"   # Environment variable name
+
+# Neural Model Settings
+neural:
+  model_path: "models/trained_encoder.pt"
+  embedding_dim: 768
+  confidence_threshold: 0.5
+  confidence_unsafe_threshold: 0.3
+  support_ratio_accept_threshold: 0.4
+  confidence_accept_threshold: 0.2
+
+# AI2-THOR Settings
+ai2thor:
+  enabled: false  # Set to true if AI2-THOR is installed
+  default_floor_plan: 1
+  width: 600
+  height: 600
+  headless: true
+
+# Logging
+logging:
+  level: "INFO"
+  log_dir: "data/logs"
+  save_traces: true
+
+# Execution
+execution:
+  parallel_workers: 20
+  rate_limit_delay: 0.1
+  cache_scenes: true
+

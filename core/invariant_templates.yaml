@@ -1,0 +1,52 @@
+# nert/core/invariant_templates.yaml
+# PDDL-Style Safety Specifications
+#
+# These templates define preconditions and postconditions for robot actions
+# using PDDL-inspired predicate notation. They constrain code generation and
+# provide verification targets for post-hoc validation.
+#
+# Format: First-order logic predicates
+# Usage: Specification, not planning domain
+# Purpose: Guide LLM code generation and verify generated code maintains safety
+#
+# Note: These are constraint specifications, not a complete PDDL planning domain.
+# No automated planner is invoked - these guide code generation and verification.
+
+pddl:
+  pickup:
+    preconditions:
+      - "exists({object})"
+      - "at(robot, {object})"
+      - "gripper_empty()"
+    postconditions:
+      - "holding({object})"
+      - "not(at({object}, location))"
+      - "not(gripper_empty())"
+  
+  place:
+    preconditions:
+      - "holding({object})"
+      - "at(robot, {destination})"
+    postconditions:
+      - "at({object}, {destination})"
+      - "not(holding({object}))"
+      - "gripper_empty()"
+  
+  navigate:
+    preconditions:
+      - "path_clear(robot, {destination})"
+    postconditions:
+      - "at(robot, {destination})"
+
+ltl_templates:
+  safety:
+    - "G(¬collision)"
+    - "G(¬spilled)"
+    - "G(temperature < threshold → distance > safe_distance)"
+  
+  liveness:
+    - "F(task_complete)"
+    - "F(at_goal)"
+  
+  fairness:
+    - "G(request → F(response))"
