@@ -2,10 +2,10 @@
 
 # LLM Settings
 llm:
-  model: gemini-2.0-flash #"gpt-4o"  # Available: gpt-4o, gpt-4-turbo, gpt-3.5-turbo, gemini-2.0-flash, etc.
+  model: gpt-4o #gemini-2.0-flash #"gpt-4o"  # Available: gpt-4o, gpt-4-turbo, gpt-3.5-turbo, gemini-2.0-flash, etc.
   temperature: 0.0
   max_tokens: 2000
-  api_key_env: GOOGLE_API_KEY #"OPENAI_API_KEY"   # Environment variable name
+  api_key_env: OPENAI_API_KEY #GOOGLE_API_KEY #"OPENAI_API_KEY"   # Environment variable name
 
 # Neural Model Settings
 neural:

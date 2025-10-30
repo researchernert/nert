@@ -1,7 +1,8 @@
-# nert/simulation/safety_monitor.py 
+# nert/simulation/safety_monitor.py
 """Real-time safety monitoring for robot task execution. -- work--in--progress"""
 
 import time
+import math
 import threading
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
@@ -189,8 +190,10 @@ class SafetyMonitor:
         if action.get('action') == 'GoToObject':
             hot_appliances = self.get_hot_appliances(scene_state)
             if hot_appliances:
-                current_location = scene_state.get('robot_position')
-                pass
+                target = action.get('args', [None])[0]
+                if target and target in hot_appliances:
+                    logger.warning(f"Attempting to approach hot appliance: {target}")
+                    return False
 
         return True
 
@@ -268,7 +271,13 @@ class SafetyMonitor:
                     if obj_id != target_object:
                         obj_pos = obj_data.get('position', {})
                         if obj_pos and target_pos:
-                            nearby.append(obj_id)
+                            distance = math.sqrt(
+                                (target_pos['x'] - obj_pos['x'])**2 +
+                                (target_pos['y'] - obj_pos['y'])**2 +
+                                (target_pos['z'] - obj_pos['z'])**2
+                            )
+                            if distance <= radius:
+                                nearby.append(obj_id)
         except Exception as e:
             logger.error(f"Error getting nearby objects: {e}")
 

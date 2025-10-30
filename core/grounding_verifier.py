@@ -548,8 +548,8 @@ class SemanticGroundingVerifier:
 
             temp_controller = Controller(
                 scene=f"FloorPlan{floor_plan}",
-                width=300,
-                height=300,
+                width=1280,
+                height=720,
                 headless=True
             )
 

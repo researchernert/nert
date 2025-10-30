@@ -7,6 +7,7 @@ import uuid
 import logging
 import webbrowser
 import traceback
+import re
 import numpy as np
 from pathlib import Path
 from datetime import datetime
@@ -20,6 +21,19 @@ if os.name == 'nt':
 
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
+from PIL import Image
+
+from utils.llm_client import LLMClient
+from core.llm_clients import LLMClientFactory
+from core.safety_checker import NeurosymbolicSafetyChecker
+from core.base_llm_checker import run_base_llm_pipeline
+from core.invariant_generator import HybridInvariantGenerator
+from core.grounding_verifier import SemanticGroundingVerifier
+from simulation.code_generator import SafetyConstrainedCodeGenerator
+from simulation.code_verifier import InvariantCodeVerifier
+from simulation.task_executor import TaskExecutor
+from simulation.ai2thor_actions import AI2THORActionExecutor
+from simulation.safety_monitor import SafetyMonitor
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,7 +86,6 @@ def init_components():
         print_progress(1, 6, "Loading configuration", True, time.time() - step_start)
 
         step_start = time.time()
-        from utils.llm_client import LLMClient
         llm_client = LLMClient(config['llm']['model'])
 
         try:
@@ -88,7 +101,6 @@ def init_components():
         print_progress(2, 6, f"LLM client ready ({config['llm']['model']})", True, time.time() - step_start)
 
         step_start = time.time()
-        from core.safety_checker import NeurosymbolicSafetyChecker
         safety_checker = NeurosymbolicSafetyChecker(llm_client, config.get('neural', {}))
 
         if hasattr(safety_checker, 'confidence_estimator') and safety_checker.confidence_estimator:
@@ -101,9 +113,6 @@ def init_components():
         print_progress(3, 6, "Neurosymbolic safety checker loaded", True, time.time() - step_start)
 
         step_start = time.time()
-        from core.invariant_generator import HybridInvariantGenerator
-        from core.grounding_verifier import SemanticGroundingVerifier
-
         invariant_generator = HybridInvariantGenerator(llm_client)
         grounding_verifier = SemanticGroundingVerifier(llm_client=llm_client)
 
@@ -117,11 +126,9 @@ def init_components():
         print_progress(4, 6, "Verification engine ready", True, time.time() - step_start)
 
         step_start = time.time()
-        from simulation.code_generator import SafetyConstrainedCodeGenerator
-        from simulation.task_executor import TaskExecutor
-
         code_generator = SafetyConstrainedCodeGenerator(llm_client)
-        task_executor = TaskExecutor(use_ai2thor=config.get('ai2thor', {}).get('enabled', False))
+        # TaskExecutor not used (AI2THORActionExecutor is used instead), disable AI2-THOR to prevent duplicate controller
+        task_executor = TaskExecutor(use_ai2thor=False)
 
         print_progress(5, 6, "Code generation ready", True, time.time() - step_start)
 
@@ -158,8 +165,6 @@ def init_components():
     except Exception as e:
         initialization_error = str(e)
         system_ready = False
-        import sys
-        import traceback
         print("="*70, file=sys.stderr, flush=True)
         print(f"INITIALIZATION FAILED: {str(e)}", file=sys.stderr, flush=True)
         print("="*70, file=sys.stderr, flush=True)
@@ -190,8 +195,8 @@ def init_ai2thor_controller():
 
         print("[AI2-THOR] Creating controller with minimal parameters...")
         controller = Controller(
-            height=1000,
-            width=1000
+            height=720,
+            width=1280
         )
         print("[AI2-THOR] ✓ Controller created successfully")
 
@@ -355,7 +360,6 @@ def process_task():
         }), 400
 
     try:
-        from core.llm_clients import LLMClientFactory
         dynamic_llm_client = LLMClientFactory.create_client(selected_model)
         print(f"[{datetime.now().strftime('%H:%M:%S')}] 🤖 Using model: {selected_model}")
     except Exception as e:
@@ -388,18 +392,33 @@ def process_task():
 
         scene_objects = scene_objects_from_request
         if not scene_objects or len(scene_objects) == 0:
+            if ai2thor_controller:
+                try:
+                    current_scene = ai2thor_controller.last_event.metadata.get('sceneName', '')
+                    target_scene = f"FloorPlan{floor_plan}"
 
-            try:
-                cache_path = Path(__file__).parent.parent / 'data' / 'scene_cache.json'
-                if cache_path.exists():
-                    with open(cache_path, 'r') as f:
-                        cache = json.load(f)
-                        scene_key = f"floorplan_{floor_plan}"
-                        if scene_key in cache:
-                            scene_objects = cache[scene_key].get('objects', [])
-            except Exception as e:
-                logger.warning(f"Could not load scene cache: {e}")
-                scene_objects = []
+                    if current_scene != target_scene:
+                        logger.info(f"Resetting AI2-THOR from {current_scene} to {target_scene}")
+                        ai2thor_controller.reset(scene=target_scene)
+
+                    objects = ai2thor_controller.last_event.metadata['objects']
+                    scene_objects = sorted(list(set([obj['objectType'] for obj in objects])))
+                    logger.info(f"Loaded {len(scene_objects)} objects from AI2-THOR scene {target_scene}")
+                except Exception as e:
+                    logger.warning(f"AI2-THOR query failed: {e}, falling back to cache")
+
+            if not scene_objects:
+                try:
+                    cache_path = Path(__file__).parent.parent / 'data' / 'scene_cache.json'
+                    if cache_path.exists():
+                        with open(cache_path, 'r') as f:
+                            cache = json.load(f)
+                            scene_key = f"floorplan_{floor_plan}"
+                            if scene_key in cache:
+                                scene_objects = cache[scene_key].get('objects', [])
+                except Exception as e:
+                    logger.warning(f"Could not load scene cache: {e}")
+                    scene_objects = []
 
         all_skills = [
             'GoToObject', 'PickupObject', 'PutObject',
@@ -410,7 +429,6 @@ def process_task():
         ]
         robot_skills = [skill for skill in all_skills if skill not in disabled_skills]
 
-        from core.base_llm_checker import run_base_llm_pipeline
         result = run_base_llm_pipeline(
             task=task_text,
             scene=scene_description,
@@ -442,7 +460,6 @@ def process_task():
 
         try:
 
-            from core.safety_checker import NeurosymbolicSafetyChecker
             dynamic_safety_checker = NeurosymbolicSafetyChecker(dynamic_llm_client, config.get('neural', {}))
 
             print(f"[{timestamp}] About to call safety_checker.check() with model {selected_model}: '{task_text[:100]}...'")
@@ -484,31 +501,37 @@ def process_task():
 
         try:
 
-            from core.invariant_generator import HybridInvariantGenerator
             dynamic_invariant_generator = HybridInvariantGenerator(dynamic_llm_client)
 
             scene_objects = None
             robot_skills = None
 
-            try:
-                cache_path = Path(__file__).parent.parent / 'data' / 'scene_cache.json'
-                if cache_path.exists():
-                    with open(cache_path, 'r') as f:
-                        cache = json.load(f)
-                        scene_key = f"floorplan_{floor_plan}"
-                        if scene_key in cache:
-                            scene_objects = cache[scene_key].get('objects', [])
-            except Exception as e:
-                print(f"[{datetime.now().strftime('%H:%M:%S')}]  Could not load scene cache: {e}")
+            if ai2thor_controller:
+                try:
+                    current_scene = ai2thor_controller.last_event.metadata.get('sceneName', '')
+                    target_scene = f"FloorPlan{floor_plan}"
+
+                    if current_scene != target_scene:
+                        print(f"[{datetime.now().strftime('%H:%M:%S')}]  Resetting AI2-THOR from {current_scene} to {target_scene}")
+                        ai2thor_controller.reset(scene=target_scene)
+
+                    objects = ai2thor_controller.last_event.metadata['objects']
+                    scene_objects = sorted(list(set([obj['objectType'] for obj in objects])))
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}]  Loaded {len(scene_objects)} objects from AI2-THOR scene {target_scene}")
+                except Exception as e:
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}]  AI2-THOR query failed: {e}, falling back to cache")
 
             if not scene_objects:
-                if ai2thor_controller:
-                    try:
-                        ai2thor_controller.reset(scene=f"FloorPlan{floor_plan}")
-                        objects = ai2thor_controller.last_event.metadata['objects']
-                        scene_objects = sorted(list(set([obj['objectType'] for obj in objects])))
-                    except:
-                        pass
+                try:
+                    cache_path = Path(__file__).parent.parent / 'data' / 'scene_cache.json'
+                    if cache_path.exists():
+                        with open(cache_path, 'r') as f:
+                            cache = json.load(f)
+                            scene_key = f"floorplan_{floor_plan}"
+                            if scene_key in cache:
+                                scene_objects = cache[scene_key].get('objects', [])
+                except Exception as e:
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}]  Could not load scene cache: {e}")
 
             all_skills = [
                 'GoToObject', 'PickupObject', 'PutObject',
@@ -534,7 +557,8 @@ def process_task():
                 'pddl_postconditions': invariants.pddl_postconditions,
                 'ltl_invariants': invariants.ltl_invariants,
                 'stl_constraints': invariants.stl_constraints,
-                'llm_contextual': invariants.llm_contextual
+                'llm_contextual': invariants.llm_contextual,
+                'relations': invariants.relations
             }
 
             timestamp = datetime.now().strftime('%H:%M:%S')
@@ -551,13 +575,14 @@ def process_task():
 
         try:
 
-            from core.grounding_verifier import SemanticGroundingVerifier
             dynamic_grounding_verifier = SemanticGroundingVerifier(llm_client=dynamic_llm_client)
 
             grounding_passed, grounding_details = dynamic_grounding_verifier.verify(
                 task_text,
                 invariants.__dict__,
-                floor_plan=floor_plan
+                floor_plan=floor_plan,
+                scene_objects=scene_objects,
+                robot_skills=robot_skills
             )
             stage_time = time.time() - stage_start
             result['processing_times']['grounding'] = stage_time
@@ -584,11 +609,10 @@ def process_task():
 
         try:
 
-            from simulation.code_generator import SafetyConstrainedCodeGenerator
             dynamic_code_generator = SafetyConstrainedCodeGenerator(dynamic_llm_client)
 
             scene_objects = list(grounding_details.keys()) if grounding_details else []
-            generated_code = dynamic_code_generator.generate(task_text, invariants.__dict__, scene_objects)
+            generated_code = dynamic_code_generator.generate(task_text, invariants.__dict__, scene_objects, invariants.relations)
             stage_time = time.time() - stage_start
             result['processing_times']['code_generation'] = stage_time
 
@@ -599,8 +623,6 @@ def process_task():
             print(f"[{datetime.now().strftime('%H:%M:%S')}] Code generated ({stage_time:.1f}s)")
 
             stage_start = time.time()
-            # Create fresh code verifier per request to prevent Z3 solver state accumulation
-            from simulation.code_verifier import InvariantCodeVerifier
             dynamic_code_verifier = InvariantCodeVerifier()
 
             valid, violations, methods_used = dynamic_code_verifier.verify(
@@ -638,7 +660,7 @@ def process_task():
                             'details': execution_result.get('details', ''),
                             'error': execution_result.get('error') if not execution_result.get('success', False) else None,
                             'ai2thor_screenshot': execution_result.get('screenshot_path'),
-                            'video_folder': execution_result.get('video_folder')
+                            'video': execution_result.get('video')
                         }
 
                         if execution_result.get('success', False):
@@ -670,7 +692,7 @@ def process_task():
 
         total_time = time.time() - start_time
         result['total_processing_time'] = total_time
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] 🎉 Task processing complete! ({total_time:.1f}s total)")
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] Task processing complete! ({total_time:.1f}s total)")
 
     except Exception as e:
         error_trace = traceback.format_exc()
@@ -698,8 +720,6 @@ def test_endpoint():
 @app.route('/models')
 def get_available_models():
     try:
-        from core.llm_clients import LLMClientFactory
-
         models = LLMClientFactory.get_available_models()
         api_keys = LLMClientFactory.check_api_keys()
 
@@ -741,45 +761,65 @@ def get_scene_objects():
     floor_plan = request.args.get('floor_plan', 1, type=int)
 
     try:
-
         if ai2thor_controller:
+            try:
+                current_scene = ai2thor_controller.last_event.metadata.get('sceneName', '')
+                target_scene = f"FloorPlan{floor_plan}"
 
-            ai2thor_controller.reset(scene=f"FloorPlan{floor_plan}")
-            objects = ai2thor_controller.last_event.metadata['objects']
+                if current_scene != target_scene:
+                    ai2thor_controller.reset(scene=target_scene)
 
-            object_types = sorted(list(set([obj['objectType'] for obj in objects])))
+                objects = ai2thor_controller.last_event.metadata['objects']
+                object_types = sorted(list(set([obj['objectType'] for obj in objects])))
 
-            return jsonify({
-                'objects': object_types,
-                'floor_plan': floor_plan
-            })
+                return jsonify({
+                    'objects': object_types,
+                    'floor_plan': floor_plan
+                })
+            except Exception as e:
+                logger.warning(f"AI2-THOR query failed: {e}, falling back to cache")
+
+        try:
+            cache_path = Path(__file__).parent.parent / 'data' / 'scene_cache.json'
+            if cache_path.exists():
+                with open(cache_path, 'r') as f:
+                    cache = json.load(f)
+                    scene_key = f"floorplan_{floor_plan}"
+                    if scene_key in cache:
+                        object_types = cache[scene_key].get('objects', [])
+                        if object_types:
+                            return jsonify({
+                                'objects': object_types,
+                                'floor_plan': floor_plan
+                            })
+        except Exception:
+            pass
+
+        mock_objects = {
+            'kitchen': ['Apple', 'Book', 'Bottle', 'Bowl', 'Bread', 'Cabinet',
+                       'CoffeeMachine', 'CounterTop', 'Cup', 'Fridge', 'Knife',
+                       'Microwave', 'Pan', 'Plate', 'Sink', 'Stove', 'Toaster'],
+            'living': ['ArmChair', 'Book', 'CoffeeTable', 'FloorLamp', 'Laptop',
+                      'Painting', 'RemoteControl', 'Sofa', 'Television'],
+            'bedroom': ['Bed', 'Book', 'Desk', 'DeskLamp', 'Dresser', 'Mirror',
+                       'Painting', 'Pillow'],
+            'bathroom': ['Bathtub', 'Cabinet', 'Faucet', 'Mirror', 'Sink',
+                        'SoapBar', 'Toilet', 'Towel']
+        }
+
+        if floor_plan <= 30:
+            room_type = 'kitchen'
+        elif floor_plan <= 230:
+            room_type = 'living'
+        elif floor_plan <= 330:
+            room_type = 'bedroom'
         else:
+            room_type = 'bathroom'
 
-            mock_objects = {
-                'kitchen': ['Apple', 'Book', 'Bottle', 'Bowl', 'Bread', 'Cabinet',
-                           'CoffeeMachine', 'CounterTop', 'Cup', 'Fridge', 'Knife',
-                           'Microwave', 'Pan', 'Plate', 'Sink', 'Stove', 'Toaster'],
-                'living': ['ArmChair', 'Book', 'CoffeeTable', 'FloorLamp', 'Laptop',
-                          'Painting', 'RemoteControl', 'Sofa', 'Television'],
-                'bedroom': ['Bed', 'Book', 'Desk', 'DeskLamp', 'Dresser', 'Mirror',
-                           'Painting', 'Pillow'],
-                'bathroom': ['Bathtub', 'Cabinet', 'Faucet', 'Mirror', 'Sink',
-                            'SoapBar', 'Toilet', 'Towel']
-            }
-
-            if floor_plan <= 30:
-                room_type = 'kitchen'
-            elif floor_plan <= 230:
-                room_type = 'living'
-            elif floor_plan <= 330:
-                room_type = 'bedroom'
-            else:
-                room_type = 'bathroom'
-
-            return jsonify({
-                'objects': mock_objects.get(room_type, []),
-                'floor_plan': floor_plan
-            })
+        return jsonify({
+            'objects': mock_objects.get(room_type, []),
+            'floor_plan': floor_plan
+        })
 
     except Exception as e:
         logger.error(f"Error getting scene objects: {e}")
@@ -831,7 +871,6 @@ def serve_video(filepath):
         videos_dir = Path(__file__).parent.parent / 'data' / 'videos'
         video_path = videos_dir / filepath
 
-        # Check if file exists
         if not video_path.exists():
             logger.error(f"Video file not found: {filepath}")
             return jsonify({
@@ -839,20 +878,66 @@ def serve_video(filepath):
                 'filepath': filepath
             }), 404
 
-        # Check if file is actually a video
-        if not filepath.endswith(('.mp4', '.webm', '.avi', '.mov')):
-            logger.error(f"Invalid video format requested: {filepath}")
+        if not filepath.endswith(('.mp4', '.webm', '.avi', '.mov', '.gif')):
+            logger.error(f"Invalid video/gif format requested: {filepath}")
             return jsonify({
-                'error': 'Invalid video format',
+                'error': 'Invalid video/gif format',
                 'filepath': filepath
             }), 400
 
-        return send_from_directory(videos_dir, filepath, mimetype='video/mp4')
+        if filepath.endswith('.gif'):
+            mimetype = 'image/gif'
+        else:
+            mimetype = 'video/mp4'
+
+        return send_from_directory(videos_dir, filepath, mimetype=mimetype)
 
     except Exception as e:
         logger.error(f"Error serving video {filepath}: {e}")
         return jsonify({
             'error': 'Failed to serve video',
+            'details': str(e)
+        }), 500
+
+@app.route('/api/feedback', methods=['POST'])
+def save_feedback():
+    try:
+        feedback_data = request.get_json()
+
+        if not feedback_data:
+            return jsonify({'error': 'No feedback data provided'}), 400
+
+        feedback_dir = Path(__file__).parent.parent / 'data' / 'feedback'
+        feedback_dir.mkdir(parents=True, exist_ok=True)
+
+        feedback_file = feedback_dir / 'feedback_log.jsonl'
+
+        feedback_entry = {
+            'timestamp': feedback_data.get('timestamp', datetime.now().isoformat()),
+            'session_id': feedback_data.get('session_id'),
+            'task': feedback_data.get('task'),
+            'prediction': feedback_data.get('prediction'),
+            'confidence': feedback_data.get('confidence'),
+            'mode': feedback_data.get('mode'),
+            'verdict': feedback_data.get('verdict'),
+            'reasons': feedback_data.get('reasons', []),
+            'comment': feedback_data.get('comment', '')
+        }
+
+        with open(feedback_file, 'a', encoding='utf-8') as f:
+            f.write(json.dumps(feedback_entry) + '\n')
+
+        logger.info(f"Feedback saved: {feedback_entry['verdict']} for session {feedback_entry['session_id']}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Feedback saved successfully'
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error saving feedback: {e}")
+        return jsonify({
+            'error': 'Failed to save feedback',
             'details': str(e)
         }), 500
 
@@ -865,13 +950,15 @@ def execute_task_in_ai2thor(generated_code: str, task_text: str, floor_plan: int
 
     try:
 
-        from simulation.ai2thor_actions import AI2THORActionExecutor
-        from simulation.safety_monitor import SafetyMonitor
-
         session_id = str(uuid.uuid4())[:8]
         executor = AI2THORActionExecutor(ai2thor_controller, enable_video=True, session_id=session_id)
 
-        ai2thor_controller.reset(scene=f"FloorPlan{floor_plan}")
+        event = ai2thor_controller.reset(scene=f"FloorPlan{floor_plan}")
+
+        # Wire camera hooks after scene reset
+        if executor.video_recorder:
+            executor.video_recorder.notify_scene_reset()
+            executor.video_recorder.setup_camera_after_scene_load(event)
 
         if safety_checker:
             monitor = SafetyMonitor(ai2thor_controller, safety_checker)
@@ -911,26 +998,33 @@ def execute_task_in_ai2thor(generated_code: str, task_text: str, floor_plan: int
         scene_changes = analyze_scene_changes(initial_objects, final_objects)
 
         video_info = execution_result.get('video', {})
-        video_folder_info = None
+        video_data = None
         if video_info and 'output_folder' in video_info:
             folder_path = Path(video_info['output_folder'])
-            if folder_path.exists():
-                files = []
-                for file in folder_path.rglob('*'):
-                    if file.is_file():
-                        rel_path = file.relative_to(folder_path)
-                        file_size_mb = file.stat().st_size / (1024 * 1024)
-                        files.append({
-                            'name': str(rel_path),
-                            'size_mb': round(file_size_mb, 2)
-                        })
 
-                video_folder_info = {
-                    'folder_path': str(folder_path.resolve()),
-                    'total_frames': video_info.get('total_frames', 0),
-                    'duration': video_info.get('duration', 0),
-                    'files': files
-                }
+            # Extract GIF paths relative to the data/videos directory
+            gif_paths = []
+            for gif_full_path in video_info.get('gifs', []):
+                gif_path_obj = Path(gif_full_path)
+                if gif_path_obj.exists():
+                    # Convert to relative path from data/videos for serving
+                    try:
+                        rel_to_videos = gif_path_obj.relative_to(Path('data/videos'))
+                        # Convert to forward slashes for URL compatibility
+                        gif_paths.append(str(rel_to_videos).replace('\\', '/'))
+                    except ValueError:
+                        # If not under data/videos, use session_id/filename
+                        gif_paths.append(f"{session_id}/{gif_path_obj.name}")
+
+            video_data = {
+                'session_id': session_id,
+                'gifs': gif_paths,  # e.g., ['abc123/composite.gif', 'abc123/agent.gif']
+                'videos': [],  # MP4s still compiling in background
+                'folder_path': str(folder_path.resolve()),
+                'total_frames': video_info.get('total_frames', 0),
+                'duration': video_info.get('duration', 0),
+                'video_status': video_info.get('video_status', 'processing')
+            }
 
         result = {
             'success': execution_result['success'],
@@ -939,7 +1033,7 @@ def execute_task_in_ai2thor(generated_code: str, task_text: str, floor_plan: int
             'executed_actions': execution_result['executed_actions'],
             'total_actions': len(actions),
             'scene_changes': scene_changes,
-            'video_folder': video_folder_info 
+            'video': video_data
         }
 
         if monitor:
@@ -1019,8 +1113,6 @@ def parse_robot_code(code: str) -> List[Dict]:
     return actions
 
 def extract_object_from_line(line: str) -> str:
-
-    import re
     match = re.search(r'"([^"]*)"', line)
     if match:
         return match.group(1)
@@ -1144,7 +1236,6 @@ def save_ai2thor_screenshot() -> str:
 
         frame = ai2thor_controller.last_event.frame
 
-        from PIL import Image
         img = Image.fromarray(frame)
 
         img.save(screenshot_path, 'PNG', optimize=True)
@@ -1192,7 +1283,19 @@ if __name__ == '__main__':
     try:
         print_banner()
 
-        init_components()
+        # init_components() already called by _kickoff_init() background thread
+        # Wait for it to complete instead of calling again
+        import time
+        max_wait = 30  # seconds
+        waited = 0
+        while not system_ready and waited < max_wait:
+            time.sleep(0.5)
+            waited += 0.5
+
+        if waited >= max_wait and not system_ready:
+            print(f"[ERROR] System initialization timed out after {max_wait}s")
+            print(f"Error: {initialization_error}")
+            sys.exit(1)
 
         if system_ready:
 
@@ -1202,8 +1305,8 @@ if __name__ == '__main__':
                 browser_thread.start()
 
             port_display = os.environ.get('PORT', 5000)
-            print(f"🚀 Server starting on port {port_display}")
-            print("💡 Press Ctrl+C to stop")
+            print(f"Server starting on port {port_display}")
+            print("Press Ctrl+C to stop")
             print()
 
             log = logging.getLogger('werkzeug')
@@ -1224,7 +1327,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
     except KeyboardInterrupt:
-        print("\n👋 NERT stopped by user")
+        print("\n NERT stopped by user")
         sys.exit(0)
     except Exception as e:
         print(f"\n Failed to start NERT: {e}")

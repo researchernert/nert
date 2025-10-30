@@ -257,6 +257,111 @@ A detailed checklist of invariants, preconditions, and postconditions for each s
 4. **PutObject(R, Apple, GarbageCan):**
     * Preconditions: `Holding(R, Apple) ∧ At(R, GarbageCan) ∧ InList(Canonical(Apple), ObjectList) ∧ InList(Canonical(GarbageCan), ObjectList) ∧ HasSkill(R, Place)`
     * Postconditions: `¬Holding(R, Apple) ∧ In(Apple, GarbageCan)`
+
+### Relations Summary:
+[
+  {{"action": "navigate", "destination": "Apple"}},
+  {{"action": "pickup", "obj": "Apple"}},
+  {{"action": "navigate", "destination": "GarbageCan"}},
+  {{"action": "place", "obj": "Apple", "rel": "in", "destination": "GarbageCan"}}
+]
+```
+
+---
+
+## IMPORTANT: Relations Summary for Machine Parsing
+
+After providing your detailed analysis above, you MUST include a Relations Summary section. This allows the system to correctly parse and verify your plan.
+
+### Relations Summary Format:
+
+Provide a JSON array with one entry per action (navigation, manipulation, and state-change actions).
+
+**Action Format Reference:**
+
+1. **Navigation:**
+   ```json
+   {{"action": "navigate", "destination": "<object_or_location>"}}
+   ```
+
+2. **Pickup:**
+   ```json
+   {{"action": "pickup", "obj": "<object>"}}
+   ```
+
+3. **Place (with spatial relation):**
+   ```json
+   {{"action": "place", "obj": "<object>", "rel": "<relation>", "destination": "<receptacle>"}}
+   ```
+
+   **Spatial Relations Guide:**
+   - Use `"rel": "in"` for **containers** (objects that enclose/contain):
+     * Fridge, Microwave, Drawer, Cabinet, Box, GarbageCan, Sink, Bowl, Pot, Cup, Mug
+     * Example: `{{"action": "place", "obj": "Apple", "rel": "in", "destination": "Fridge"}}`
+
+   - Use `"rel": "on"` for **surfaces/receptacles** (objects with flat tops):
+     * Table, Desk, CounterTop, Shelf, Plate, Stool, Chair, Bed, Sofa
+     * Example: `{{"action": "place", "obj": "Book", "rel": "on", "destination": "Table"}}`
+
+   - Use `"rel": "under"` for **beneath placement**:
+     * Example: `{{"action": "place", "obj": "Ball", "rel": "under", "destination": "Table"}}`
+
+4. **Drop (release held object at current location):**
+   ```json
+   {{"action": "drop", "obj": "<object>"}}
+   ```
+
+5. **Throw:**
+   ```json
+   {{"action": "throw", "obj": "<object>"}}
+   ```
+
+6. **Open (state change - does NOT move object):**
+   ```json
+   {{"action": "open", "target": "<object>"}}
+   ```
+
+7. **Close (state change - does NOT move object):**
+   ```json
+   {{"action": "close", "target": "<object>"}}
+   ```
+
+8. **Switch On (state change - does NOT move object):**
+   ```json
+   {{"action": "switch_on", "target": "<object>"}}
+   ```
+
+9. **Switch Off (state change - does NOT move object):**
+   ```json
+   {{"action": "switch_off", "target": "<object>"}}
+   ```
+
+10. **Slice:**
+    ```json
+    {{"action": "slice", "target": "<object>"}}
+    ```
+
+11. **Break:**
+    ```json
+    {{"action": "break", "target": "<object>"}}
+    ```
+
+12. **Push:**
+    ```json
+    {{"action": "push", "target": "<object>"}}
+    ```
+
+13. **Pull:**
+    ```json
+    {{"action": "pull", "target": "<object>"}}
+    ```
+
+**REMEMBER:**
+- Always include the Relations Summary section
+- Use exact action names: navigate, pickup, place, drop, throw, open, close, switch_on, switch_off, slice, break, push, pull
+- For place actions, choose the correct relation: "in" for containers, "on" for surfaces
+- State-change actions (open, close, switch_on, switch_off, slice, break) use "target" field only
+- Movement actions (place, throw, drop) use "obj" field
 """
 
 CODE_GENERATION_PROMPT = """Generate Python code for a robot task that respects all safety constraints.
@@ -355,8 +460,8 @@ AVAILABLE OBJECTS: {objects}
 ROBOT SKILLS:
 {skills}
 
-1. **Analyze Input**: Parse user task description and scene details
-2. **Break Down Task**: Identify core objectives and required components
+1. **Analyze Input**: Parse user task description and scene details for completing the task according to user requirements
+2. **Break Down Task**: Identify core objectives, required components, and the steps required to complete the task
 
 REQUIRED OUTPUT FORMAT (follow exactly):
 Line 1: Write ONLY "Task Good to Assign" OR "Task Not Approved"

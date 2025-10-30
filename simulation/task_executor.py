@@ -2,7 +2,10 @@
 """Execute tasks in AI2-THOR simulator."""
 
 import traceback
+import logging
 from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class TaskExecutor:
@@ -21,8 +24,8 @@ class TaskExecutor:
             from ai2thor.controller import Controller
             self.controller = Controller(
                 scene="FloorPlan1",
-                width=600,
-                height=600,
+                width=1280,
+                height=720,
                 headless=True
             )
         except ImportError:
@@ -92,13 +95,33 @@ class TaskExecutor:
     def place(self, object_name: str, location: str):
         """Place object at location."""
         if self.controller:
+            held_object = self.controller.last_event.metadata["agent"].get("heldObject")
+            if not held_object:
+                raise ValueError(f"Place failed: robot is not holding any object")
+
+            receptacle_obj = None
             for obj in self.controller.last_event.metadata["objects"]:
                 if location.lower() in obj["objectType"].lower():
-                    self.controller.step(
-                        action="PutObject",
-                        objectId=obj["objectId"]
-                    )
-                    return
+                    receptacle_obj = obj
+                    break
+
+            if not receptacle_obj:
+                raise ValueError(f"Place failed: receptacle '{location}' not found")
+
+            if receptacle_obj.get("openable") and not receptacle_obj.get("isOpen", False):
+                logger.info(f"Opening {location} before placing")
+                self.controller.step(
+                    action="OpenObject",
+                    objectId=receptacle_obj["objectId"]
+                )
+
+            self.controller.step(
+                action="PutObject",
+                objectId=held_object["objectId"],
+                receptacleObjectId=receptacle_obj["objectId"],
+                forceAction=False
+            )
+            return
     
     def open_object(self, object_name: str):
         """Open an object."""

@@ -25,8 +25,14 @@ class ActionType(Enum):
     PLACE = "place"
     OPEN = "open"
     CLOSE = "close"
-    POUR = "pour"
+    SWITCH_ON = "switch_on"
+    SWITCH_OFF = "switch_off"
     SLICE = "slice"
+    BREAK = "break"
+    THROW = "throw"
+    PUSH = "push"
+    PULL = "pull"
+    DROP = "drop"
 
 
 @dataclass
@@ -36,13 +42,19 @@ class RobotState:
     holding: Optional[str]
     objects_at: Dict[str, str]
     opened: Set[str]
-    
+    powered: Set[str]
+    sliced: Set[str]
+    broken: Set[str]
+
     def copy(self):
         return RobotState(
             location=self.location,
             holding=self.holding,
             objects_at=self.objects_at.copy(),
-            opened=self.opened.copy()
+            opened=self.opened.copy(),
+            powered=self.powered.copy(),
+            sliced=self.sliced.copy(),
+            broken=self.broken.copy()
         )
 
 
@@ -225,22 +237,24 @@ class InvariantCodeVerifier:
             return ActionType.OPEN
         elif 'closeobject' in function_lower or 'close' in function_lower:
             return ActionType.CLOSE
-        elif 'pour' in function_lower:
-            return ActionType.POUR
+        elif 'switchon' in function_lower:
+            return ActionType.SWITCH_ON
+        elif 'switchoff' in function_lower:
+            return ActionType.SWITCH_OFF
         elif 'sliceobject' in function_lower or 'slice' in function_lower or 'cut' in function_lower:
             return ActionType.SLICE
         elif 'breakobject' in function_lower or 'break' in function_lower:
-            return ActionType.SLICE  
+            return ActionType.BREAK
         elif 'throwobject' in function_lower or 'throw' in function_lower:
-            return ActionType.PLACE  
-        elif 'switchon' in function_lower or 'switchoff' in function_lower:
-            return ActionType.OPEN  
-        elif 'pushobject' in function_lower or 'pullobject' in function_lower:
-            return ActionType.NAVIGATE  
+            return ActionType.THROW
+        elif 'pushobject' in function_lower or 'push' in function_lower:
+            return ActionType.PUSH
+        elif 'pullobject' in function_lower or 'pull' in function_lower:
+            return ActionType.PULL
         elif 'drophandobject' in function_lower or 'drop' in function_lower:
-            return ActionType.PLACE  
+            return ActionType.DROP
         else:
-            return ActionType.NAVIGATE  # Default
+            return ActionType.NAVIGATE
     
     def verify_preconditions_dynamically(self, actions: List[Dict], 
                                         invariants: Dict) -> Tuple[bool, List[str]]:
@@ -257,13 +271,22 @@ class InvariantCodeVerifier:
             'robot_at': None,
             'holding': None,
             'object_locations': {},
-            'opened': set()
+            'opened': set(),
+            'powered': set(),
+            'sliced': set(),
+            'broken': set()
         }
         
         for i, action in enumerate(actions):
             action_type = action['type']
-            action_target = action['args'][0] if action['args'] else None
-            
+            if action['args']:
+                if len(action['args']) >= 2:
+                    action_target = action['args'][1]
+                else:
+                    action_target = action['args'][0]
+            else:
+                action_target = None
+
             required_preconditions = precond_patterns.get(action_type, [])
             
             for precond in required_preconditions:
@@ -289,8 +312,14 @@ class InvariantCodeVerifier:
             ActionType.NAVIGATE: [],
             ActionType.OPEN: [],
             ActionType.CLOSE: [],
-            ActionType.POUR: [],
-            ActionType.SLICE: []
+            ActionType.SWITCH_ON: [],
+            ActionType.SWITCH_OFF: [],
+            ActionType.SLICE: [],
+            ActionType.BREAK: [],
+            ActionType.THROW: [],
+            ActionType.PUSH: [],
+            ActionType.PULL: [],
+            ActionType.DROP: []
         }
         
         for inv_str in invariant_strings:
@@ -434,10 +463,36 @@ class InvariantCodeVerifier:
                 
         elif action_type == ActionType.OPEN:
             new_state.setdefault('opened', set()).add(target)
-            
+
         elif action_type == ActionType.CLOSE:
             new_state.setdefault('opened', set()).discard(target)
-        
+
+        elif action_type == ActionType.SWITCH_ON:
+            new_state.setdefault('powered', set()).add(target)
+
+        elif action_type == ActionType.SWITCH_OFF:
+            new_state.setdefault('powered', set()).discard(target)
+
+        elif action_type == ActionType.SLICE:
+            new_state.setdefault('sliced', set()).add(target)
+
+        elif action_type == ActionType.BREAK:
+            new_state.setdefault('broken', set()).add(target)
+
+        elif action_type == ActionType.THROW:
+            if state.get('holding'):
+                new_state['holding'] = None
+
+        elif action_type == ActionType.DROP:
+            if state.get('holding'):
+                new_state['holding'] = None
+
+        elif action_type == ActionType.PUSH:
+            pass
+
+        elif action_type == ActionType.PULL:
+            pass
+
         return new_state
     
     def verify_preconditions_formally(self, actions: List[Dict], 
@@ -503,7 +558,10 @@ class InvariantCodeVerifier:
             location='start',
             holding=None,
             objects_at={},
-            opened=set()
+            opened=set(),
+            powered=set(),
+            sliced=set(),
+            broken=set()
         )
 
         state_trace = [state.copy()]
@@ -518,7 +576,10 @@ class InvariantCodeVerifier:
             
             if action['type'] == ActionType.NAVIGATE:
                 if action['args']:
-                    new_state.location = str(action['args'][0])
+                    if len(action['args']) >= 2:
+                        new_state.location = str(action['args'][1])
+                    else:
+                        new_state.location = str(action['args'][0])
                     
             elif action['type'] == ActionType.PICKUP:
                 if action['args'] and new_state.holding is None:
@@ -554,13 +615,56 @@ class InvariantCodeVerifier:
                     
             elif action['type'] == ActionType.OPEN:
                 if action['args']:
-                    new_state.opened.add(str(action['args'][0]))
-                    
+                    target = str(action['args'][1]) if len(action['args']) >= 2 else str(action['args'][0])
+                    new_state.opened.add(target)
+
             elif action['type'] == ActionType.CLOSE:
                 if action['args']:
-                    obj = str(action['args'][0])
-                    new_state.opened.discard(obj)
-            
+                    target = str(action['args'][1]) if len(action['args']) >= 2 else str(action['args'][0])
+                    new_state.opened.discard(target)
+
+            elif action['type'] == ActionType.SWITCH_ON:
+                if action['args']:
+                    target = str(action['args'][1]) if len(action['args']) >= 2 else str(action['args'][0])
+                    new_state.powered.add(target)
+
+            elif action['type'] == ActionType.SWITCH_OFF:
+                if action['args']:
+                    target = str(action['args'][1]) if len(action['args']) >= 2 else str(action['args'][0])
+                    new_state.powered.discard(target)
+
+            elif action['type'] == ActionType.SLICE:
+                if action['args']:
+                    target = str(action['args'][1]) if len(action['args']) >= 2 else str(action['args'][0])
+                    new_state.sliced.add(target)
+
+            elif action['type'] == ActionType.BREAK:
+                if action['args']:
+                    target = str(action['args'][1]) if len(action['args']) >= 2 else str(action['args'][0])
+                    new_state.broken.add(target)
+
+            elif action['type'] == ActionType.THROW:
+                if new_state.holding:
+                    thrown_obj = new_state.holding
+                    new_state.holding = None
+                    log_ok(f"Threw '{thrown_obj}'")
+
+            elif action['type'] == ActionType.DROP:
+                if new_state.holding:
+                    dropped_obj = new_state.holding
+                    new_state.holding = None
+                    log_ok(f"Dropped '{dropped_obj}'")
+
+            elif action['type'] == ActionType.PUSH:
+                if action['args']:
+                    target = str(action['args'][1]) if len(action['args']) >= 2 else str(action['args'][0])
+                    log_ok(f"Pushed '{target}'")
+
+            elif action['type'] == ActionType.PULL:
+                if action['args']:
+                    target = str(action['args'][1]) if len(action['args']) >= 2 else str(action['args'][0])
+                    log_ok(f"Pulled '{target}'")
+
             state = new_state
             state_trace.append(state.copy())
             log_debug_substep(f"State: location='{state.location}', holding={state.holding}, objects_at={state.objects_at}")
@@ -620,7 +724,72 @@ class InvariantCodeVerifier:
 
                         if actual_location is None or actual_location.lower() != location.lower():
                             violations.append(f"{obj} not at {location}")
-        
+
+            elif 'opened(' in postcond:
+                match = re.search(r'opened\((\w+)\)', postcond)
+                if match:
+                    target = match.group(1)
+                    target_lower = target.lower()
+                    opened_lower = {s.lower() for s in final_state.opened}
+                    if 'not(' in postcond:
+                        if target_lower in opened_lower:
+                            violations.append(f"Postcondition failed: {postcond}")
+                    else:
+                        if target_lower not in opened_lower:
+                            violations.append(f"Postcondition failed: {postcond}")
+
+            elif 'powered_on(' in postcond:
+                match = re.search(r'powered_on\((\w+)\)', postcond)
+                if match:
+                    target = match.group(1)
+                    target_lower = target.lower()
+                    powered_lower = {s.lower() for s in final_state.powered}
+                    if 'not(' in postcond:
+                        if target_lower in powered_lower:
+                            violations.append(f"Postcondition failed: {postcond}")
+                    else:
+                        if target_lower not in powered_lower:
+                            violations.append(f"Postcondition failed: {postcond}")
+
+            elif 'sliced(' in postcond:
+                match = re.search(r'sliced\((\w+)\)', postcond)
+                if match:
+                    target = match.group(1)
+                    target_lower = target.lower()
+                    sliced_lower = {s.lower() for s in final_state.sliced}
+                    if target_lower not in sliced_lower:
+                        violations.append(f"Postcondition failed: {postcond}")
+
+            elif 'broken(' in postcond:
+                match = re.search(r'broken\((\w+)\)', postcond)
+                if match:
+                    target = match.group(1)
+                    target_lower = target.lower()
+                    broken_lower = {s.lower() for s in final_state.broken}
+                    if target_lower not in broken_lower:
+                        violations.append(f"Postcondition failed: {postcond}")
+
+            elif 'on(' in postcond or 'in(' in postcond or 'under(' in postcond:
+                match = re.search(r'(on|in|under)\((\w+),\s*(\w+)\)', postcond)
+                if match:
+                    relation = match.group(1)
+                    obj = match.group(2)
+                    destination = match.group(3)
+
+                    actual_location = final_state.objects_at.get(obj)
+                    if actual_location is None:
+                        for obj_key, loc_val in final_state.objects_at.items():
+                            if obj_key.lower() == obj.lower():
+                                actual_location = loc_val
+                                break
+
+                    if actual_location is None or actual_location.lower() != destination.lower():
+                        violations.append(f"{obj} not {relation} {destination}")
+
+            elif 'gripper_empty()' in postcond:
+                if final_state.holding is not None:
+                    violations.append(f"Postcondition failed: {postcond}")
+
         return len(violations) == 0, violations
     
     def verify_ltl_properties(self, state_trace: List[RobotState], 

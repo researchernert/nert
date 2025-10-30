@@ -38,11 +38,19 @@ def check_safety_base_llm(task: str, scene_description: str, llm_client, tempera
         decision = _parse_safety_response_for_benchmark(response)
         prediction = "safe" if decision == "ACCEPT" else "unsafe"
         logger.info(f"BASE_LLM benchmark classification: {prediction} (decision: {decision})")
-        return {'prediction': prediction}
+        return {
+            'prediction': prediction,
+            'success': True
+        }
 
     except Exception as e:
         logger.error(f"BASE_LLM safety check failed: {e}")
-        return {'prediction': 'unsafe'}
+        return {
+            'prediction': 'unsafe',
+            'success': False,
+            'error': str(e),
+            'error_type': type(e).__name__
+        }
 
 
 def _parse_safety_response_for_benchmark(response: str) -> str:

@@ -1,658 +1,396 @@
 """
 Video recording module for AI2-THOR task execution.
 
-Captures agent view and top-down view during task execution and generates
-both composite and individual view videos for research analysis.
+Records multi-view videos of AI2-THOR task execution.
+Creates: agent.mp4, topdown.mp4, composite.mp4
 """
 
-import os
-import json
-import shutil
 import subprocess
-import threading
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-from PIL import Image, ImageDraw, ImageFont
 import numpy as np
-from datetime import datetime
+from PIL import Image
+from pathlib import Path
 import logging
+import shutil
 
 logger = logging.getLogger(__name__)
 
 
 class VideoRecorder:
-    """Records multi-view videos of AI2-THOR task execution."""
-
-    def __init__(self, controller, session_id: str, config: Optional[Dict] = None):
-        """
-        Initialize video recorder with AI2-THOR controller.
-
-        Args:
-            controller: AI2-THOR controller instance
-            session_id: Unique session identifier
-            config: Video recording configuration
-        """
+    def __init__(self, controller, session_id: str, config: dict | None = None):
         self.controller = controller
         self.session_id = session_id
-        self.config = config or self.get_default_config()
+        self.config = config or {}
+        self.base_dir = Path(self.config.get("output_dir", "data/videos")) / session_id
+        self.base_dir.mkdir(parents=True, exist_ok=True)
 
-        self.base_dir = Path('data/videos') / session_id
-        self.frames_dir = self.base_dir / 'frames'
-        self.setup_directories()
+        self._topdown_id: int | None = None
+        self._writers_open = False
+        self._fps = int(self.config.get("fps", 1))
+        self._agent_size = None     
+        self._topdown_size = None   
+        self._composite_size = None 
+
+        self._ff_agent = None
+        self._ff_top = None
+        self._ff_comp = None
+
+        self._target_h = int(self.config.get("target_height", 720))
 
         self.frame_count = 0
-        self.action_log = []
-        self.camera_properties = None
 
-        self.setup_top_view_camera()
+        self._frame_buffer = {'agent': [], 'topdown': [], 'composite': []}
+        self._save_frames = self.config.get("export_gifs", True)
 
-    def get_default_config(self) -> Dict:
-        """Get default video configuration."""
-        return {
-            'composite_video': True,       # Generate composite view
-            'separate_videos': True,       # Generate individual views
-            'export_gifs': True,           # Export animated GIFs
-            'keep_raw_frames': True,       # Keep frames for research use
-            'frame_duration': 1.5,         # Seconds per frame (more intuitive than frame_rate)
-            'resolution': (1920, 1080),    # Output resolution
-            'add_overlays': True,          # Add action labels and info
-            'overlay_font_size': 20,       # Font size for overlays
-        }
+    def notify_scene_reset(self):
+        """Must be called right after any controller.reset(...)."""
+        self._topdown_id = None
 
-    def _get_frame_rate(self) -> float:
-        """Calculate frame rate from frame duration."""
-        frame_duration = self.config.get('frame_duration', 1.5)
-        return 1.0 / frame_duration
-
-    def setup_directories(self):
-        """Create necessary directories for video storage."""
-        self.base_dir.mkdir(parents=True, exist_ok=True)
-        self.frames_dir.mkdir(exist_ok=True)
-
-        # Create subdirectories for each view
-        for view in ['agent', 'top_down', 'composite']:
-            (self.frames_dir / view).mkdir(exist_ok=True)
-
-    def setup_top_view_camera(self):
-        """Setup top-down camera with comprehensive diagnostics and cascading fix attempts."""
-        logger.info("=" * 60)
-        logger.info("CAMERA SETUP - DIAGNOSTIC MODE")
-        logger.info("=" * 60)
-
-        # explore multiple approaches in sequence
-        if self._try_standard_camera_setup():
-            return
-        if self._try_override_rotation():
-            return
-        if self._try_manual_camera_properties():
-            return
-        if self._try_multiagent_mode():
-            return
-
-        logger.error("✗ All camera setup attempts failed - using agent view fallback")
-        self.camera_properties = None
-        logger.info("=" * 60)
-
-    def _verify_camera_is_different(self, event) -> bool:
-        """Verify third-party camera shows different view than agent camera."""
-        try:
-            agent_frame = event.frame
-            if len(event.third_party_camera_frames) == 0:
-                logger.warning(" No third-party camera frames available")
-                return False
-
-            tp_frame = event.third_party_camera_frames[0]
-
-            diff = np.abs(agent_frame.astype(float) - tp_frame.astype(float))
-            avg_diff = np.mean(diff)
-
-            logger.info(f"  Camera difference check: avg pixel diff = {avg_diff:.2f}")
-
-            if avg_diff < 5.0:
-                logger.warning(" Third-party camera identical to agent view!")
-                return False
-
-            logger.info(" Third-party camera shows distinct view")
-            return True
-        except Exception as e:
-            logger.error(f"  Error verifying camera: {e}")
-            return False
-
-    def _try_standard_camera_setup(self) -> bool:
-        """Attempt 1: Standard GetMapViewCameraProperties approach."""
-        logger.info("\n[Attempt 1/4] Using GetMapViewCameraProperties...")
-        try:
-            event = self.controller.step(action="GetMapViewCameraProperties")
-
-            if not event.metadata["lastActionSuccess"]:
-                logger.warning(f"  GetMapViewCameraProperties failed: {event.metadata.get('errorMessage')}")
-                return False
-
-            props = event.metadata["actionReturn"]
-            logger.info(f"  Properties received:")
-            logger.info(f"    Position: {props.get('position')}")
-            logger.info(f"    Rotation: {props.get('rotation')}")
-            logger.info(f"    Orthographic: {props.get('orthographic')}")
-            logger.info(f"    Field of View: {props.get('fieldOfView')}")
-
-            event = self.controller.step(action="AddThirdPartyCamera", **props)
-
-            if not event.metadata["lastActionSuccess"]:
-                logger.warning(f"  AddThirdPartyCamera failed: {event.metadata.get('errorMessage')}")
-                return False
-
-            event = self.controller.step(action="Pass")
-            logger.info(f"  Third-party frames after Pass: {len(event.third_party_camera_frames)}")
-
-            if self._verify_camera_is_different(event):
-                self.camera_properties = props
-                logger.info("✓ Standard setup succeeded!")
-                logger.info("=" * 60)
-                return True
-
-            return False
-
-        except Exception as e:
-            logger.error(f"  Exception in standard setup: {e}")
-            return False
-
-    def _try_override_rotation(self) -> bool:
-        """Attempt 2: Override rotation to force top-down view."""
-        logger.info("\n[Attempt 2/4] Override rotation to force top-down...")
-        try:
-            event = self.controller.step(action="GetMapViewCameraProperties")
-
-            if not event.metadata["lastActionSuccess"]:
-                return False
-
-            props = event.metadata["actionReturn"]
-
-            props['rotation'] = {'x': 90, 'y': 0, 'z': 0}
-            props['orthographic'] = True
-
-            logger.info(f"  Modified properties:")
-            logger.info(f"    Rotation: {props['rotation']} (FORCED)")
-            logger.info(f"    Orthographic: {props['orthographic']} (FORCED)")
-
-            event = self.controller.step(action="AddThirdPartyCamera", **props)
-
-            if not event.metadata["lastActionSuccess"]:
-                logger.warning(f"  AddThirdPartyCamera failed: {event.metadata.get('errorMessage')}")
-                return False
-
-            event = self.controller.step(action="Pass")
-            logger.info(f"  Third-party frames after Pass: {len(event.third_party_camera_frames)}")
-
-            if self._verify_camera_is_different(event):
-                self.camera_properties = props
-                logger.info("✓ Override rotation succeeded!")
-                logger.info("=" * 60)
-                return True
-
-            return False
-
-        except Exception as e:
-            logger.error(f"  Exception in override rotation: {e}")
-            return False
-
-    def _try_manual_camera_properties(self) -> bool:
-        """Attempt 3: Manually construct camera properties."""
-        logger.info("\n[Attempt 3/4] Manual camera construction...")
-        try:
-            event = self.controller.last_event
-            scene_bounds = event.metadata.get('sceneBounds', {})
-            center = scene_bounds.get('center', {'x': 0, 'y': 0, 'z': 0})
-
-            logger.info(f"  Scene center: {center}")
-
-            props = {
-                'position': {'x': center['x'], 'y': 5.0, 'z': center['z']},
-                'rotation': {'x': 90, 'y': 0, 'z': 0},
-                'orthographic': True,
-                'fieldOfView': 50,
-                'orthographicSize': 5
-            }
-
-            logger.info(f"  Manual properties:")
-            logger.info(f"    Position: {props['position']}")
-            logger.info(f"    Rotation: {props['rotation']}")
-
-            event = self.controller.step(action="AddThirdPartyCamera", **props)
-
-            if not event.metadata["lastActionSuccess"]:
-                logger.warning(f"  AddThirdPartyCamera failed: {event.metadata.get('errorMessage')}")
-                return False
-
-            event = self.controller.step(action="Pass")
-            logger.info(f"  Third-party frames after Pass: {len(event.third_party_camera_frames)}")
-
-            if self._verify_camera_is_different(event):
-                self.camera_properties = props
-                logger.info("✓ Manual camera construction succeeded!")
-                logger.info("=" * 60)
-                return True
-
-            return False
-
-        except Exception as e:
-            logger.error(f"  Exception in manual construction: {e}")
-            return False
-
-    def _try_multiagent_mode(self) -> bool:
-        """Attempt 4: Re-initialize with explicit agentCount."""
-        logger.info("\n[Attempt 4/4] Multi-agent mode initialization...")
-        try:
-            event = self.controller.step(
-                action='Initialize',
-                agentCount=1,
-                agentMode='default'
-            )
-
-            if not event.metadata['lastActionSuccess']:
-                logger.warning(f"  Initialize failed: {event.metadata.get('errorMessage')}")
-                return False
-
-            logger.info("  Re-initialized with agentCount=1")
-
-            return self._try_standard_camera_setup()
-
-        except Exception as e:
-            logger.error(f"  Exception in multi-agent mode: {e}")
-            return False
-
-    def capture_frame(self, action_name: str = "", success: bool = True):
+    def setup_camera_after_scene_load(self, event=None):
         """
-        Capture current frame from agent view and top-down view.
-
-        Args:
-            action_name: Name of the action just performed
-            success: Whether the action succeeded
+        Create a static orthographic top-down camera once per scene load.
+        Assumes you'll begin stepping with renderImage=True immediately after.
         """
-        try:
-            frames = {}
+        self._ensure_topdown_camera_static(event)
 
-            agent_frame = self.controller.last_event.frame
-            if agent_frame is not None:
-                frames['agent'] = Image.fromarray(agent_frame)
+        # Guard rail: verify top-down frames exist after adding camera
+        tp = getattr(self.controller.last_event, "third_party_camera_frames", None) or \
+            getattr(self.controller.last_event, "third_party_frames", None)
+        if not tp:
+            raise RuntimeError("Top-down frames missing after AddThirdPartyCamera; ensure renderImage=True.")
+
+    def _ensure_topdown_camera_static(self, event=None):
+        """Create static orthographic top-down camera with smart positioning - hybrid approach."""
+        if self._topdown_id is not None:
+            return
+
+        # ---- 1) Robust center/size from scene bounds (preferred, geometrically correct) ----
+        cx = cz = 0.0
+        half_x = half_z = 5.0
+        y_inside = 1.75
+        source = "default"
+
+        if event is not None:
+            # Try sceneBounds first (most accurate)
+            sb = event.metadata.get("sceneBounds") or {}
+            center = sb.get("center") or {}
+            size = sb.get("size") or {}
+
+            if center and size:
+                # sceneBounds available - use it (geometrically perfect)
+                cx = float(center.get("x", 0.0))
+                cz = float(center.get("z", 0.0))
+                half_x = float(size.get("x", 10.0)) / 2.0
+                half_z = float(size.get("z", 10.0)) / 2.0
+
+                # Place camera just below the ceiling: center.y + half_y - epsilon
+                cy = float(center.get("y", 0.0))
+                half_y = float(size.get("y", 3.0)) / 2.0
+                y_inside = cy + half_y - 0.05
+                source = "sceneBounds"
             else:
-                logger.warning(f"No agent frame available at frame {self.frame_count}")
-                return
-
-            if self.camera_properties:
+                # Fall back to reachablePositions (wider compatibility, corrected math)
                 try:
-                    top_down_frame = self.controller.last_event.events[0].third_party_camera_frames[-1]
-                    frames['top_down'] = Image.fromarray(top_down_frame)
-                    logger.debug(f"Captured top-down frame: {top_down_frame.shape}")
-                except (IndexError, AttributeError) as e:
-                    logger.warning(f"Could not access top-down camera frame: {e}")
-                    frames['top_down'] = frames['agent'].copy()
-            else:
-                logger.warning("Top-down camera not initialized - using agent view as fallback")
-                frames['top_down'] = frames['agent'].copy()
+                    rp = event.metadata.get("reachablePositions") or []
+                    if rp:
+                        cx = sum(p["x"] for p in rp) / len(rp)
+                        cz = sum(p["z"] for p in rp) / len(rp)
+                        xs = [p["x"] for p in rp]
+                        zs = [p["z"] for p in rp]
+                        span_x = max(xs) - min(xs)
+                        span_z = max(zs) - min(zs)
+                        # CORRECTED: Convert span (diameter) to half-dimension (radius)
+                        half_x = span_x / 2.0
+                        half_z = span_z / 2.0
+                        # Use fixed y for fallback
+                        y_inside = float(self.config.get("minimap_height", 1.75))
+                        source = "reachablePositions"
+                except Exception:
+                    pass
 
-            if self.config['add_overlays']:
-                frames = self.add_overlays(frames, action_name, success)
+        # Clamp y to safe range [1.5, 2.2] for typical rooms
+        y_inside = max(1.5, min(2.2, y_inside))
 
-            for view_name, frame in frames.items():
-                frame_path = self.frames_dir / view_name / f"frame_{self.frame_count:05d}.png"
-                frame.save(frame_path)
+        # Orthographic size: SMALLER value = room fills MORE of frame
+        # Use 0.80 to make room fill ~95% of both width and height
+        ortho_size = max(2.2, min(6.5, max(half_x, half_z) * 0.80))
 
-            if self.config['composite_video']:
-                composite = self.create_composite_frame(frames, action_name, success)
-                composite_path = self.frames_dir / 'composite' / f"frame_{self.frame_count:05d}.png"
-                composite.save(composite_path)
+        # ---- 2) Add camera once - simple, no retry ----
+        td_event = self.controller.step(
+            action="AddThirdPartyCamera",
+            position={"x": cx, "y": y_inside, "z": cz},
+            rotation={"x": 90.0, "y": 0.0, "z": 0.0},
+            orthographic=True,
+            orthographicSize=float(ortho_size),
+            nearClippingPlane=0.02,
+            farClippingPlane=15.0,
+            renderImage=True,
+        )
 
-            self.action_log.append({
-                'frame': self.frame_count,
-                'time': self.frame_count * self.config['frame_duration'],
-                'action': action_name,
-                'success': success
-            })
+        cams = td_event.metadata.get("thirdPartyCameras", [])
+        if not cams:
+            raise RuntimeError("Failed to add third-party camera on scene load.")
+        self._topdown_id = cams[-1].get("id", 0)
 
-            self.frame_count += 1
+    @staticmethod
+    def _get_topdown_frame_from_event(event) -> np.ndarray:
+        """AI2-THOR has used both attributes; support either."""
+        tp = getattr(event, "third_party_camera_frames", None)
+        if tp is None:
+            tp = getattr(event, "third_party_frames", None)
+        if not tp:
+            raise RuntimeError("Top-down frame not present; ensure camera add/update ran this step.")
+        return tp[0]
 
-        except Exception as e:
-            logger.error(f"Failed to capture frame {self.frame_count}: {e}")
+    @staticmethod
+    def _resize_to_height(img_np: np.ndarray, target_h: int) -> np.ndarray:
+        im = Image.fromarray(img_np)
+        w = int(round(im.width * (target_h / im.height)))
+        im = im.resize((w, target_h), Image.BICUBIC)
+        return np.asarray(im)
 
-    def add_overlays(self, frames: Dict[str, Image.Image], action_name: str,
-                     success: bool) -> Dict[str, Image.Image]:
+    @staticmethod
+    def _compose_side_by_side(left_np: np.ndarray, right_np: np.ndarray) -> np.ndarray:
+        L = Image.fromarray(left_np)
+        R = Image.fromarray(right_np)
+        h = min(L.height, R.height)
+        if L.height != h:
+            L = L.resize((int(L.width * h / L.height), h), Image.BICUBIC)
+        if R.height != h:
+            R = R.resize((int(R.width * h / R.height), h), Image.BICUBIC)
+        out = Image.new("RGB", (L.width + R.width, h))
+        out.paste(L, (0, 0))
+        out.paste(R, (L.width, 0))
+        return np.asarray(out)
+
+    @staticmethod
+    def _ffmpeg_exists() -> bool:
+        return shutil.which("ffmpeg") is not None
+
+    @staticmethod
+    def _spawn_ffmpeg(path: Path, w: int, h: int, fps: int):
         """
-        Add informative overlays to frames.
-
-        Args:
-            frames: Dictionary of PIL Images for each view
-            action_name: Current action being performed
-            success: Whether action succeeded
+        Open an ffmpeg process that accepts raw RGB frames on stdin.
+        Encodes H.264 MP4 with sane defaults.
         """
-        overlaid_frames = {}
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-f", "rawvideo",
+            "-pix_fmt", "rgb24",
+            "-s", f"{w}x{h}",
+            "-r", str(fps),
+            "-i", "pipe:0",
+            "-vcodec", "libx264",
+            "-pix_fmt", "yuv420p",
+            "-preset", "veryfast",
+            "-crf", "20",
+            str(path),
+        ]
+        return subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def _open_writers(self, agent_frame: np.ndarray, top_frame: np.ndarray, comp_frame: np.ndarray):
+        if not self._ffmpeg_exists():
+            raise RuntimeError("ffmpeg not found on PATH. Please install ffmpeg.")
+
+        aw, ah = agent_frame.shape[1], agent_frame.shape[0]
+        tw, th = top_frame.shape[1], top_frame.shape[0]
+        cw, ch = comp_frame.shape[1], comp_frame.shape[0]
+        self._agent_size = (aw, ah)
+        self._topdown_size = (tw, th)
+        self._composite_size = (cw, ch)
+
+        self._ff_agent = self._spawn_ffmpeg(self.base_dir / "agent.mp4", aw, ah, self._fps)
+        self._ff_top   = self._spawn_ffmpeg(self.base_dir / "topdown.mp4", tw, th, self._fps)
+        self._ff_comp  = self._spawn_ffmpeg(self.base_dir / "composite.mp4", cw, ch, self._fps)
+        self._writers_open = True
+        logger.info(f"Opened writers: agent={aw}x{ah}, top={tw}x{th}, comp={cw}x{ch}, fps={self._fps}")
+
+    def _write_frame(self, proc: subprocess.Popen, frame_np: np.ndarray):
+        if proc and proc.stdin:
+            try:
+                proc.stdin.write(frame_np.astype(np.uint8).tobytes())
+            except BrokenPipeError:
+                logger.error("FFmpeg pipe broken - process may have crashed")
+
+    def _close_writers(self):
+        for p in (self._ff_agent, self._ff_top, self._ff_comp):
+            if p is not None:
+                try:
+                    if p.stdin:
+                        p.stdin.flush()
+                        p.stdin.close()
+                    p.wait(timeout=10)
+                except Exception as e:
+                    logger.warning(f"Error closing ffmpeg process: {e}")
+        self._ff_agent = self._ff_top = self._ff_comp = None
+        self._writers_open = False
+        logger.info("Closed all video writers.")
+
+    def start_episode(self):
+        """No-op for camera; camera must be set up via setup_camera_after_scene_load() after reset."""
+        if self._topdown_id is None:
+            raise RuntimeError("Camera not initialized. Call setup_camera_after_scene_load() after reset.")
+
+    def record_step(self, event):
+        """
+        Note: The top-down camera is static and does not follow the agent.
+        """
+        agent_np = event.frame
+
+        # Guard: verify third-party camera frames are present (requires renderImage=True)
+        tp = getattr(event, "third_party_camera_frames", None) or getattr(event, "third_party_frames", None)
+        if not tp:
+            raise RuntimeError("Top-down frames missing; ensure renderImage=True on every controller.step call.")
 
         try:
-            try:
-                font = ImageFont.truetype("arial.ttf", self.config['overlay_font_size'])
-                small_font = ImageFont.truetype("arial.ttf", 14)
-            except:
-                font = ImageFont.load_default()
-                small_font = font
+            top_np = self._get_topdown_frame_from_event(event)
+        except RuntimeError as e:
+            logger.warning(f"Top-down camera unavailable, using agent view: {e}")
+            top_np = agent_np
 
-            for view_name, frame in frames.items():
-                frame_copy = frame.copy()
-                draw = ImageDraw.Draw(frame_copy)
+        if agent_np.shape == top_np.shape and np.array_equal(agent_np, top_np):
+            if self._topdown_id is not None:
+                logger.warning("Agent and top-down frames are identical; camera may have failed.")
 
-                if view_name == 'agent':
-                    action_text = f"Action: {action_name}" if action_name else "Initializing..."
-                    status_color = (0, 255, 0) if success else (255, 0, 0)
+        agent_np = self._resize_to_height(agent_np, self._target_h)
+        top_np   = self._resize_to_height(top_np,   self._target_h)
+        comp_np  = self._compose_side_by_side(agent_np, top_np)
 
-                    draw.rectangle([(10, 10), (500, 50)], fill=(0, 0, 0, 128))
-                    draw.text((20, 20), action_text, fill=status_color, font=font)
+        if not self._writers_open:
+            self._open_writers(agent_np, top_np, comp_np)
 
-                    draw.text((frame.width - 150, 20),
-                             f"Frame: {self.frame_count:05d}",
-                             fill=(255, 255, 255), font=small_font)
+        self._write_frame(self._ff_agent, agent_np)
+        self._write_frame(self._ff_top,   top_np)
+        self._write_frame(self._ff_comp,  comp_np)
 
-                elif view_name == 'top_down':
-                    draw.rectangle([(10, 10), (200, 40)], fill=(0, 0, 0, 128))
-                    draw.text((20, 15), "Top-Down View", fill=(255, 255, 255), font=font)
+        if self._save_frames:
+            self._frame_buffer['agent'].append(Image.fromarray(agent_np))
+            self._frame_buffer['topdown'].append(Image.fromarray(top_np))
+            self._frame_buffer['composite'].append(Image.fromarray(comp_np))
 
-                overlaid_frames[view_name] = frame_copy
+        self.frame_count += 1
 
-        except Exception as e:
-            logger.warning(f"Could not add overlays: {e}")
-            return frames
+    def end_episode(self):
+        """Call once after the loop to finalize files."""
+        if self._writers_open:
+            self._close_writers()
 
-        return overlaid_frames
-
-    def create_composite_frame(self, frames: Dict[str, Image.Image],
-                               action_name: str, success: bool) -> Image.Image:
-        """
-        Create composite frame with agent view and top-down view side by side.
-
-        """
-        width, height = self.config['resolution']
-        composite = Image.new('RGB', (width, height), (0, 0, 0))
-
+    def run_episode(self, action_seq: list[dict]):
+        self.start_episode()
         try:
-            view_width = width // 2
-            view_height = height - 50  
+            for act in action_seq:
+                event = self.controller.step(**act, renderImage=True)
+                self.record_step(event)
+        finally:
+            self.end_episode()
 
-            agent_resized = frames['agent'].resize((view_width, view_height), Image.LANCZOS)
-            composite.paste(agent_resized, (0, 0))
 
-            top_resized = frames['top_down'].resize((view_width, view_height), Image.LANCZOS)
-            composite.paste(top_resized, (view_width, 0))
-
-            draw = ImageDraw.Draw(composite)
-
-            draw.line([(view_width, 0), (view_width, view_height)], fill=(255, 255, 255), width=2)
-
-            banner_y = height - 50
-            draw.rectangle([(0, banner_y), (width, height)], fill=(30, 30, 30))
-
-            action_text = f"Step {self.frame_count}: {action_name}" if action_name else "Initializing..."
-            status_text = "✓ Success" if success else "✗ Failed"
-            status_color = (0, 255, 0) if success else (255, 0, 0)
-
-            try:
-                font = ImageFont.truetype("arial.ttf", 18)
-            except:
-                font = ImageFont.load_default()
-
-            draw.text((20, banner_y + 15), action_text, fill=(255, 255, 255), font=font)
-            draw.text((width - 150, banner_y + 15), status_text, fill=status_color, font=font)
-
-        except Exception as e:
-            logger.error(f"Failed to create composite frame: {e}")
-            return frames['agent']
-
-        return composite
-
-    def compile_videos(self):
-        """Compile frames into videos using FFmpeg with comprehensive error handling."""
-        videos_created = []
-        errors = []
-
-        try:
-            result = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True)
-            if result.returncode != 0:
-                error_msg = "FFmpeg is not installed or not in PATH"
-                logger.error(error_msg)
-                errors.append(error_msg)
-                return videos_created
-        except FileNotFoundError:
-            error_msg = "FFmpeg executable not found. Please install FFmpeg."
-            logger.error(error_msg)
-            errors.append(error_msg)
-            return videos_created
-
-        views_to_compile = []
-        if self.config['composite_video']:
-            views_to_compile.append('composite')
-        if self.config['separate_videos']:
-            views_to_compile.extend(['agent', 'top_down'])
-
-        for view in views_to_compile:
-            try:
-                frames_path = self.frames_dir / view
-                output_path = self.base_dir / f"{view}.mp4"
-
-                frame_pattern = frames_path / 'frame_*.png'
-                frame_files = list(frames_path.glob("frame_*.png"))
-
-                if not frame_files:
-                    logger.warning(f"No frames found for {view} view in {frames_path}")
-                    continue
-
-                logger.info(f"Compiling {len(frame_files)} frames for {view} view...")
-
-                frame_rate = self._get_frame_rate()
-
-                # FFmpeg command with detailed parameters
-                cmd = [
-                    'ffmpeg',
-                    '-y',  # Overwrite output file
-                    '-framerate', str(frame_rate),
-                    '-pattern_type', 'glob',
-                    '-i', str(frame_pattern),
-                    '-c:v', 'libx264',  # H.264 codec
-                    '-preset', 'medium',  # Encoding speed/quality tradeoff
-                    '-crf', '23',  # Quality (lower = better, 23 is good)
-                    '-pix_fmt', 'yuv420p',  # Pixel format for compatibility
-                    '-loglevel', 'error',  # Only show errors
-                    str(output_path)
-                ]
-
-                # Run FFmpeg with timeout
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=60  # 60 second timeout
-                )
-
-                if result.returncode == 0:
-                    if output_path.exists() and output_path.stat().st_size > 0:
-                        videos_created.append(str(output_path))
-                        file_size_mb = output_path.stat().st_size / (1024 * 1024)
-                        logger.info(f"Successfully created {view}.mp4 ({file_size_mb:.1f} MB)")
-                    else:
-                        error_msg = f"FFmpeg appeared to succeed but output file is missing or empty for {view}"
-                        logger.error(error_msg)
-                        errors.append(error_msg)
-                else:
-                    error_msg = f"FFmpeg failed for {view}: {result.stderr}"
-                    logger.error(error_msg)
-                    errors.append(error_msg)
-
-            except subprocess.TimeoutExpired:
-                error_msg = f"FFmpeg timed out for {view} view"
-                logger.error(error_msg)
-                errors.append(error_msg)
-            except Exception as e:
-                error_msg = f"Failed to compile {view} video: {str(e)}"
-                logger.error(error_msg)
-                errors.append(error_msg)
-
-        if errors:
-            logger.error(f"Video compilation completed with {len(errors)} errors:")
-            for error in errors:
-                logger.error(f"  - {error}")
-
-        return videos_created
-
-    def compile_gifs(self):
-        """Compile frames into animated GIFs with comprehensive error handling."""
+    def compile_gifs(self) -> list:
+        """Compile buffered frames into animated GIFs."""
         gifs_created = []
-        errors = []
 
-        if not self.config.get('export_gifs', False):
+        if not self._save_frames:
             logger.info("GIF export disabled in configuration")
             return gifs_created
 
-        views_to_compile = []
-        if self.config['composite_video']:
-            views_to_compile.append('composite')
-        if self.config['separate_videos']:
-            views_to_compile.extend(['agent', 'top_down'])
+        for view_name, frames in self._frame_buffer.items():
+            if not frames:
+                logger.warning(f"No frames buffered for {view_name} view")
+                continue
 
-        for view in views_to_compile:
             try:
-                frames_path = self.frames_dir / view
-                output_path = self.base_dir / f"{view}.gif"
+                output_path = self.base_dir / f"{view_name}.gif"
+                logger.info(f"Creating GIF from {len(frames)} frames for {view_name} view...")
 
-                frame_files = sorted(frames_path.glob("frame_*.png"))
+                duration_ms = int(1000 / self._fps)
 
-                if not frame_files:
-                    logger.warning(f"No frames found for {view} view in {frames_path}")
-                    continue
+                rgb_frames = []
+                for frame in frames:
+                    if frame.mode != 'RGB':
+                        rgb_frames.append(frame.convert('RGB'))
+                    else:
+                        rgb_frames.append(frame)
 
-                logger.info(f"Creating GIF from {len(frame_files)} frames for {view} view...")
-
-                frames = []
-                for frame_file in frame_files:
-                    try:
-                        frame = Image.open(frame_file)
-                        if frame.mode not in ('RGB', 'P'):
-                            frame = frame.convert('RGB')
-                        frames.append(frame)
-                    except Exception as e:
-                        logger.warning(f"Could not load frame {frame_file}: {e}")
-                        continue
-
-                if not frames:
-                    error_msg = f"No valid frames loaded for {view} view"
-                    logger.error(error_msg)
-                    errors.append(error_msg)
-                    continue
-
-                duration_ms = int(self.config['frame_duration'] * 1000)
-
-                frames[0].save(
+                rgb_frames[0].save(
                     output_path,
                     save_all=True,
-                    append_images=frames[1:],
+                    append_images=rgb_frames[1:],
                     duration=duration_ms,
                     loop=0, 
-                    optimize=True  
+                    optimize=True
                 )
 
                 if output_path.exists() and output_path.stat().st_size > 0:
                     gifs_created.append(str(output_path))
                     file_size_mb = output_path.stat().st_size / (1024 * 1024)
-                    logger.info(f"Successfully created {view}.gif ({file_size_mb:.1f} MB)")
+                    logger.info(f"Successfully created {view_name}.gif ({file_size_mb:.1f} MB)")
                 else:
-                    error_msg = f"GIF creation appeared to succeed but output file is missing or empty for {view}"
-                    logger.error(error_msg)
-                    errors.append(error_msg)
+                    logger.error(f"GIF creation failed for {view_name}")
 
             except Exception as e:
-                error_msg = f"Failed to compile {view} GIF: {str(e)}"
-                logger.error(error_msg)
-                errors.append(error_msg)
-
-        if errors:
-            logger.error(f"GIF compilation completed with {len(errors)} errors:")
-            for error in errors:
-                logger.error(f"  - {error}")
+                logger.error(f"Failed to compile {view_name} GIF: {e}")
 
         return gifs_created
 
-    def save_metadata(self):
-        """Save metadata about the recording session."""
-        metadata = {
-            'session_id': self.session_id,
-            'timestamp': datetime.now().isoformat(),
-            'total_frames': self.frame_count,
-            'duration': self.frame_count * self.config['frame_duration'] if self.frame_count > 0 else 0,
-            'frame_duration': self.config['frame_duration'],
-            'frame_rate': self._get_frame_rate(),
-            'resolution': list(self.config['resolution']),
-            'views': ['agent', 'top_down'],
-            'actions': self.action_log,
-            'camera_properties': self.camera_properties,
-            'config': self.config
-        }
+    # backward compatibility methods
 
-        metadata_path = self.base_dir / 'metadata.json'
-        with open(metadata_path, 'w') as f:
-            json.dump(metadata, f, indent=2, default=str)
+    def _update_overhead_follow(self):
+        pass
 
-        logger.info(f"Saved metadata to {metadata_path}")
-        return metadata_path
-
-    def _compile_videos_background(self):
-        """Background thread function to compile videos without blocking UI."""
-        try:
-            logger.info("[Background] Starting video compilation...")
-            videos = self.compile_videos()
-            if videos:
-                logger.info(f"[Background] Video compilation complete: {len(videos)} videos created")
-                logger.info(f"[Background] Videos saved to: {self.base_dir}")
-            else:
-                logger.warning("[Background] No videos were created - check FFmpeg installation")
-        except Exception as e:
-            logger.error(f"[Background] Video compilation failed: {e}")
-
-    def finalize(self) -> Dict:
+    def capture_frame(self, action_name: str = "", success: bool = True):
         """
-        Finalize video recording: compile GIFs immediately, videos in background.
+        Backward compatibility wrapper for old API.
 
-        Returns GIF paths immediately for UI display. Videos compile asynchronously.
+        """
+        event = self.controller.last_event
+
+        if not self._writers_open and self._topdown_id is None:
+            self.start_episode()
+
+        self.record_step(event)
+
+    def finalize(self) -> dict:
+        """
+        Backward compatibility wrapper for old API.
 
         Returns:
-            Dictionary with paths to created GIFs and metadata
+            Dictionary with video paths, GIF paths, and metadata
         """
-        logger.info(f"Finalizing video recording for session {self.session_id}")
-        logger.info(f"Total frames captured: {self.frame_count}")
+        self.end_episode()
 
         gifs = self.compile_gifs()
 
-        video_thread = threading.Thread(
-            target=self._compile_videos_background,
-            name=f"VideoCompiler-{self.session_id}",
-            daemon=True
-        )
-        video_thread.start()
-        logger.info("[Background] Video compilation started in background thread")
+        self._frame_buffer = {'agent': [], 'topdown': [], 'composite': []}
 
-        metadata_path = self.save_metadata()
+        videos = []
+        for filename in ["agent.mp4", "topdown.mp4", "composite.mp4"]:
+            video_path = self.base_dir / filename
+            if video_path.exists():
+                videos.append(str(video_path))
 
-        total_duration = self.frame_count * self.config['frame_duration'] if self.frame_count > 0 else 0
+        duration = self.frame_count / self._fps if self.frame_count > 0 else 0
 
         result = {
             'session_id': self.session_id,
+            'videos': videos,
             'gifs': gifs,
-            'metadata': str(metadata_path),
+            'metadata': str(self.base_dir / 'metadata.txt'),
             'output_folder': str(self.base_dir),
             'total_frames': self.frame_count,
-            'duration': total_duration,
-            'video_status': 'processing'  
+            'duration': duration,
         }
 
-        if gifs:
-            logger.info(f"GIF export complete: {len(gifs)} GIFs created")
-        else:
-            logger.info("No GIFs were created - check configuration or frame captures")
+        try:
+            metadata_path = self.base_dir / 'metadata.txt'
+            with open(metadata_path, 'w') as f:
+                f.write(f"Session ID: {self.session_id}\n")
+                f.write(f"Total Frames: {self.frame_count}\n")
+                f.write(f"Duration: {duration:.2f}s\n")
+                f.write(f"FPS: {self._fps}\n")
+                f.write(f"Videos: {', '.join([Path(v).name for v in videos])}\n")
+                f.write(f"GIFs: {', '.join([Path(g).name for g in gifs])}\n")
+        except Exception as e:
+            logger.warning(f"Could not write metadata: {e}")
 
-        logger.info(f"Results ready for UI. Output folder: {self.base_dir}")
-        logger.info("Note: Videos are compiling in background and will be available shortly")
-
+        logger.info(f"Video recording finalized: {len(videos)} videos, {len(gifs)} GIFs created")
         return result

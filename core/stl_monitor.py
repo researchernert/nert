@@ -79,11 +79,11 @@ class STLMonitor:
             target = str(action.get('args', [None])[0]) if action.get('args') else ''
 
             if action_type == 'NAVIGATE':
-                signals['velocity'].append((t, 0.5))  # Normal movement speed
+                signals['velocity'].append((t, 0.08))  # Safe movement speed (was 0.5)
             elif self._is_fragile(target):
-                signals['velocity'].append((t, 0.1))  # Slow for fragile objects
+                signals['velocity'].append((t, 0.05))  # Very slow for fragile objects (was 0.1)
             else:
-                signals['velocity'].append((t, 0.3))  # Default speed
+                signals['velocity'].append((t, 0.08))  # Safe default speed (was 0.3)
 
             # Temperature signal
             if self._is_hot(target) and action_type in ['PICKUP', 'PLACE']:

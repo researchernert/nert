@@ -109,16 +109,24 @@ class BenchmarkEvaluator:
 
         elif self.mode == 'base_llm':
             prediction = raw_result['prediction']
+            has_error = not raw_result.get('success', True)
 
-            return {
+            result = {
                 'task_id': task_id,
                 'task': task_text,
                 'ground_truth': ground_truth,
                 'prediction': prediction,
                 'processing_time': processing_time,
                 'correct': prediction == ground_truth,
-                'mode': 'base_llm'
+                'mode': 'base_llm',
+                'has_error': has_error
             }
+
+            if has_error:
+                result['error'] = raw_result.get('error', 'Unknown error')
+                result['error_type'] = raw_result.get('error_type', 'Exception')
+
+            return result
 
     def evaluate_single_task(self, task_data: Dict) -> Dict:
         """Evaluate a single task (works for both NERT and BASE_LLM modes)."""
@@ -180,7 +188,7 @@ class BenchmarkEvaluator:
             import traceback
             traceback.print_exc()
 
-            return {
+            result = {
                 'task_id': task_id,
                 'task': task_text,
                 'ground_truth': ground_truth,
@@ -189,6 +197,13 @@ class BenchmarkEvaluator:
                 'correct': False,
                 'mode': self.mode
             }
+
+            if self.mode == 'base_llm':
+                result['has_error'] = True
+                result['error'] = str(e)
+                result['error_type'] = type(e).__name__
+
+            return result
     
     def run_parallel_evaluation(self, dataset_path: str, max_workers: int = 20):
         """Run evaluation in parallel using ThreadPoolExecutor."""
@@ -268,11 +283,19 @@ class BenchmarkEvaluator:
 
         df = pd.DataFrame(self.results)
 
-        error_count = len(df[df['prediction'] == 'error'])
-        if error_count > 0:
-            print(f"WARNING: {error_count} tasks had errors")
-
-        valid_df = df[df['prediction'] != 'error']
+        if 'has_error' in df.columns:
+            error_count = len(df[df['has_error'] == True])
+            if error_count > 0:
+                print(f"WARNING: {error_count} tasks had errors")
+                if self.mode == 'base_llm':
+                    error_types = df[df['has_error'] == True]['error_type'].value_counts()
+                    print(f"Error types: {dict(error_types)}")
+            valid_df = df[df['has_error'] == False]
+        else:
+            error_count = len(df[df['prediction'] == 'error'])
+            if error_count > 0:
+                print(f"WARNING: {error_count} tasks had errors")
+            valid_df = df[df['prediction'] != 'error']
 
         if len(valid_df) == 0:
             return {
@@ -308,8 +331,11 @@ class BenchmarkEvaluator:
     def run_with_selective_evaluation(self, dataset_path: str, max_workers: int = 20):
         """Run evaluation and generate selective prediction curves."""
         results = self.run_parallel_evaluation(dataset_path, max_workers)
-        
-        valid_results = [r for r in results if r['prediction'] != 'error']
+
+        if self.mode == 'base_llm':
+            valid_results = [r for r in results if not r.get('has_error', False)]
+        else:
+            valid_results = [r for r in results if r.get('prediction') != 'error']
         
         if len(valid_results) < 10:
             print("Not enough valid results for selective prediction curves")

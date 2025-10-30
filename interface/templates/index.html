@@ -22,7 +22,6 @@
             --button-active: #1a1a1a;
         }
 
-        /* Base Styles */
         * {
             margin: 0;
             padding: 0;
@@ -42,7 +41,6 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Header */
         .header-section {
             background-color: var(--bg-primary);
             padding: 40px 48px 30px;
@@ -64,7 +62,6 @@
         }
 
 
-        /* Section Divider with Shadow */
         .section-divider {
             height: 1px;
             background: linear-gradient(to right, transparent 0%, #e5e7eb 20%, #e5e7eb 80%, transparent 100%);
@@ -83,7 +80,6 @@
             background: linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.05) 50%, transparent 100%);
         }
 
-        /* Main Content */
         .main-content {
             padding: 0 48px 48px;
         }
@@ -96,7 +92,6 @@
             margin: 0 auto;
         }
 
-        /* Section Labels */
         .section-label {
             font-size: 28px;
             font-weight: 700;
@@ -131,7 +126,6 @@
             padding: 32px;
         }
 
-        /* Pipeline Stages */
         .pipeline-stage {
             background: var(--bg-secondary);
             border-radius: 12px;
@@ -413,7 +407,6 @@
             color: #dc2626;
         }
 
-        /* Form Elements */
         .form-group {
             margin-bottom: 24px;
         }
@@ -472,7 +465,6 @@
             line-height: 1.4;
         }
 
-        /* Collapsible Panel Styles */
         .collapsible-header {
             user-select: none;
             transition: background-color 0.2s;
@@ -486,7 +478,6 @@
             transition: all 0.3s ease;
         }
 
-        /* Skill Toggle Styles */
         .skill-item {
             display: flex;
             justify-content: space-between;
@@ -528,7 +519,6 @@
             transform: translateX(24px);
         }
 
-        /* Object Checkbox Styles */
         .object-item {
             display: flex;
             align-items: center;
@@ -550,7 +540,6 @@
             cursor: pointer;
         }
 
-        /* Button Styling */
         .btn {
             padding: 8px 20px;
             border: none;
@@ -584,7 +573,6 @@
             transform: none;
         }
 
-        /* Example Buttons */
         .example-controls {
             margin-top: 24px;
         }
@@ -629,7 +617,6 @@
             background-color: #f0f0f0;
         }
 
-        /* Status Message */
         .status-message {
             padding: 20px 24px;
             background: #f0f8ff;
@@ -649,7 +636,6 @@
             gap: 12px;
         }
 
-        /* Loading Spinner */
         .spinner {
             width: 20px;
             height: 20px;
@@ -664,7 +650,6 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Code Display */
         .code-block {
             background: #1a1a1a;
             color: #f0f0f0;
@@ -684,7 +669,6 @@
             padding: 0;
         }
 
-        /* Invariant Display */
         .invariant-section {
             margin: 16px 0;
         }
@@ -728,7 +712,6 @@
             border-bottom: none;
         }
 
-        /* Nearest Neighbor Display */
         .nearest-neighbor {
             display: flex;
             justify-content: space-between;
@@ -811,8 +794,6 @@
             color: #dc2626;
         }
 
-
-        /* Responsive Design */
         @media (max-width: 1200px) {
             .content-grid {
                 grid-template-columns: 1fr;
@@ -831,6 +812,353 @@
                 font-size: 36px;
             }
         }
+
+        @media (max-width: 768px) {
+            .header-section {
+                padding: 24px 16px 16px;
+            }
+
+            .main-content {
+                padding: 0 16px 32px;
+            }
+
+            .section-content {
+                padding: 24px;
+            }
+
+            .header-title {
+                font-size: 32px;
+            }
+
+            .analysis-grid {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .stage-header {
+                padding: 20px;
+            }
+
+            .stage-details {
+                padding: 16px 20px 20px 84px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header-section {
+                padding: 20px 16px 16px;
+            }
+
+            .main-content {
+                padding: 0 16px 32px;
+            }
+
+            .section-content {
+                padding: 20px;
+            }
+
+            .header-title {
+                font-size: 24px;
+                line-height: 1.2;
+            }
+
+            .header-subtitle {
+                font-size: 14px;
+            }
+
+            .section-label {
+                font-size: 20px;
+            }
+
+            .section-subtitle {
+                font-size: 13px;
+            }
+
+            .stage-header {
+                padding: 16px;
+            }
+
+            .stage-icon {
+                width: 48px;
+                height: 48px;
+                font-size: 24px;
+            }
+
+            .stage-title {
+                font-size: 18px;
+            }
+
+            .stage-subtitle {
+                font-size: 13px;
+            }
+
+            .stage-details {
+                padding: 16px 20px 20px 20px;
+            }
+
+            .stage-expand-btn {
+                top: 16px;
+                right: 16px;
+                padding: 6px 10px;
+                min-width: 36px;
+                font-size: 14px;
+            }
+
+            .analysis-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .form-textarea {
+                font-size: 16px;
+            }
+
+            .btn {
+                font-size: 16px;
+                padding: 14px 24px;
+            }
+        }
+
+        body {
+            overflow-x: hidden;
+        }
+
+        .pipeline-stage {
+            max-width: 100%;
+        }
+
+        .feedback-trigger-btn {
+            padding: 8px 20px;
+            border: none;
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            white-space: nowrap;
+        }
+
+        .feedback-trigger-btn:not(:disabled) {
+            background-color: var(--warning);
+            color: white;
+            cursor: pointer;
+        }
+
+        .feedback-trigger-btn:hover:not(:disabled) {
+            background-color: #ea580c;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .feedback-trigger-btn:disabled {
+            background: #cbd5e1;
+            color: #64748b;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .feedback-sidebar {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            right: -400px;
+            width: 400px;
+            background: white;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transition: right 0.3s ease;
+            border-radius: 8px 0 0 8px;
+            border: 1px solid var(--border-primary);
+        }
+
+        .feedback-sidebar.active {
+            right: 0;
+        }
+
+        .feedback-sidebar-content {
+            padding: 32px 24px;
+        }
+
+        .feedback-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 20px 0;
+        }
+
+        .feedback-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .feedback-btn {
+            padding: 10px 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-family: inherit;
+        }
+
+        .feedback-accept {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border-color: #e5e5e5;
+        }
+
+        .feedback-accept:hover {
+            background: rgba(16, 185, 129, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .feedback-reject {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+            border-color: #e5e5e5;
+        }
+
+        .feedback-reject:hover {
+            background: rgba(239, 68, 68, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .feedback-skip {
+            background: #f5f5f5;
+            color: var(--text-secondary);
+            border-color: #e5e5e5;
+        }
+
+        .feedback-skip:hover {
+            background: #e5e5e5;
+        }
+
+        .feedback-verdict-display {
+            padding: 10px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #e5e5e5;
+            border-radius: 4px;
+            color: #dc2626;
+            font-weight: 500;
+            margin-bottom: 16px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .feedback-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .feedback-checkboxes {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .feedback-checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .feedback-checkbox-item:hover {
+            background: #f0f0f0;
+        }
+
+        .feedback-checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+
+        .feedback-textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-primary);
+            border-radius: 4px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.2s ease;
+        }
+
+        .feedback-textarea:focus {
+            outline: none;
+            border-color: var(--warning);
+        }
+
+        .feedback-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .feedback-submit {
+            flex: 1;
+            background-color: var(--button-active);
+            color: white;
+            border: none;
+        }
+
+        .feedback-submit:hover {
+            background-color: #333;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .feedback-back {
+            padding: 8px 20px;
+            background: transparent;
+            color: var(--text-secondary);
+            border-color: var(--border-primary);
+        }
+
+        .feedback-back:hover {
+            background: #f5f5f5;
+        }
+
+        .feedback-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 999;
+            display: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .feedback-backdrop.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .feedback-trigger-btn {
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+
+            .feedback-sidebar {
+                width: 90%;
+                right: -90%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -840,7 +1168,7 @@
 
         <!-- Mode Selector in Header (Right Aligned) -->
         <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
-            <div class="example-buttons">
+            <div class="example-buttons" style="width: 360px;">
                 <button id="mode-nert-btn" class="btn-example active" onclick="selectMode('nert')">NERT</button>
                 <button id="mode-base-llm-btn" class="btn-example" onclick="selectMode('base_llm')">Base LLM (No NERT)</button>
             </div>
@@ -972,8 +1300,15 @@
             <!-- B. Safety Analysis Pipeline -->
             <div class="results-section">
                 <div class="section-content">
-                    <h2 class="section-label">B. Safety Analysis Pipeline</h2>
-                    <p class="section-subtitle">Real-time neurosymbolic verification through six-stage safety analysis combining neural networks with formal verification methods.</p>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px;">
+                        <div style="flex: 1;">
+                            <h2 class="section-label" style="margin-bottom: 8px;">B. Safety Analysis Pipeline</h2>
+                            <p class="section-subtitle" style="margin-bottom: 0;">Real-time neurosymbolic verification through six-stage safety analysis combining neural networks with formal verification methods.</p>
+                        </div>
+                        <button id="feedback-trigger-btn" class="feedback-trigger-btn" disabled style="margin-left: 20px; flex-shrink: 0;">
+                            Rate NERT
+                        </button>
+                    </div>
 
                     <div class="status-message" id="status-message">
                         <div class="status-text" id="status-text">Ready to analyze your task...</div>
@@ -1087,17 +1422,77 @@
         </div>
     </div>
 
+    <div id="feedback-sidebar" class="feedback-sidebar">
+        <div class="feedback-sidebar-content">
+            <div id="feedback-simple-view" class="feedback-view">
+                <h3 class="feedback-title">Rate NERT's Decision</h3>
+                <div class="feedback-buttons">
+                    <button id="feedback-accept-btn" class="feedback-btn feedback-accept">
+                        ✅ Accept
+                    </button>
+                    <button id="feedback-reject-btn" class="feedback-btn feedback-reject">
+                        ❌ Reject
+                    </button>
+                    <button id="feedback-skip-btn" class="feedback-btn feedback-skip">
+                        Skip
+                    </button>
+                </div>
+            </div>
+
+            <div id="feedback-detailed-view" class="feedback-view" style="display: none;">
+                <h3 class="feedback-title">Rate NERT's Decision</h3>
+                <div class="feedback-verdict-display">
+                    ❌ Rejected
+                </div>
+                <div class="feedback-form">
+                    <label class="feedback-label">What went wrong? (select all that apply)</label>
+                    <div class="feedback-checkboxes">
+                        <label class="feedback-checkbox-item">
+                            <input type="checkbox" name="feedback-reason" value="safety_decision_incorrect">
+                            Safety decision incorrect
+                        </label>
+                        <label class="feedback-checkbox-item">
+                            <input type="checkbox" name="feedback-reason" value="invariant_generation_failed">
+                            Invariant generation failed
+                        </label>
+                        <label class="feedback-checkbox-item">
+                            <input type="checkbox" name="feedback-reason" value="grounding_verification_wrong">
+                            Grounding verification wrong
+                        </label>
+                        <label class="feedback-checkbox-item">
+                            <input type="checkbox" name="feedback-reason" value="code_generation_failed">
+                            Code generation failed
+                        </label>
+                        <label class="feedback-checkbox-item">
+                            <input type="checkbox" name="feedback-reason" value="code_verification_missed_issues">
+                            Code verification missed issues
+                        </label>
+                        <label class="feedback-checkbox-item">
+                            <input type="checkbox" name="feedback-reason" value="execution_mismatch">
+                            Execution didn't match plan
+                        </label>
+                    </div>
+                    <label class="feedback-label" style="margin-top: 16px;">Additional Comments:</label>
+                    <textarea id="feedback-comment" class="feedback-textarea" rows="4" placeholder="Optional: Provide more details..."></textarea>
+                    <div class="feedback-actions">
+                        <button id="feedback-submit-btn" class="feedback-btn feedback-submit">Submit</button>
+                        <button id="feedback-back-btn" class="feedback-btn feedback-back">← Back</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="feedback-backdrop" class="feedback-backdrop"></div>
+
     <script>
-        // Track stage results data
         let stageResultsData = {};
 
         let currentSceneObjects = [];
         let currentFloorPlan = 1;
 
-        // Track selected evaluation mode
         let selectedMode = 'nert';  // Default to NERT
 
-        // Mode selection function
         function selectMode(mode) {
             selectedMode = mode;
 
@@ -1115,13 +1510,11 @@
             rebuildPipelineStages(mode);
         }
 
-        // Rebuild pipeline stages based on mode
         function rebuildPipelineStages(mode) {
             const pipelineDiv = document.getElementById('pipeline-visualization');
             const subtitle = document.querySelector('.results-section .section-subtitle');
 
             if (mode === 'nert') {
-                // Update subtitle
                 subtitle.textContent = 'Real-time neurosymbolic verification through six-stage safety analysis combining neural networks with formal verification methods.';
 
                 // Create 6 NERT stages
@@ -1286,28 +1679,54 @@
                 `;
             }
 
-            // Reset stage results data
             stageResultsData = {};
+
+            const feedbackBtn = document.getElementById('feedback-trigger-btn');
+            if (feedbackBtn) {
+                feedbackBtn.disabled = true;
+            }
+            feedbackContext = {
+                sessionId: null,
+                task: null,
+                prediction: null,
+                confidence: null,
+                mode: null
+            };
         }
 
-        // Load available models on page load
+        function initializeFeedbackButtonState() {
+            const feedbackBtn = document.getElementById('feedback-trigger-btn');
+            if (!feedbackBtn) return;
+
+            const hasResults = Array.from(document.querySelectorAll('.pipeline-stage')).some(stage => {
+                return stage.classList.contains('success') || stage.classList.contains('error');
+            });
+
+            const hasContextData = feedbackContext && feedbackContext.task !== null;
+
+            if (hasResults || hasContextData) {
+                feedbackBtn.disabled = false;
+            } else {
+                feedbackBtn.disabled = true;
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             await loadAvailableModels();
             initializeLayoutSelector();
             initializeRobotSkills();
             loadSceneObjects();
+            initializeFeedbackButtonState();
         });
 
-        // Load available models from backend
         async function loadAvailableModels() {
             try {
                 const response = await fetch('/models');
                 const data = await response.json();
 
                 const modelSelect = document.getElementById('model-select');
-                modelSelect.innerHTML = ''; // Clear loading option
+                modelSelect.innerHTML = ''; 
 
-                // Populate dropdown with available models
                 Object.entries(data.models).forEach(([modelId, modelInfo]) => {
                     const option = document.createElement('option');
                     option.value = modelId;
@@ -1316,7 +1735,6 @@
                     modelSelect.appendChild(option);
                 });
 
-                // Set default selection to gpt-4o
                 if (data.models['gpt-4o']) {
                     modelSelect.value = 'gpt-4o';
                 }
@@ -1330,8 +1748,6 @@
             }
         }
 
-        // Load example tasks
-        // Initialize Layout Selector
         function initializeLayoutSelector() {
             const layoutSelect = document.getElementById('layout-select');
             for (let i = 1; i <= 30; i++) {
@@ -1341,17 +1757,15 @@
                 layoutSelect.appendChild(option);
             }
 
-            // Room type change listener
             document.getElementById('room-type-select').addEventListener('change', function() {
-                loadSceneObjects();  // Reload objects for new room type
+                loadSceneObjects(); 
             });
 
             document.getElementById('layout-select').addEventListener('change', function() {
-                loadSceneObjects();  // Reload objects for new layout
+                loadSceneObjects();
             });
         }
 
-        // Calculate Floor Plan Number
         function calculateFloorPlan() {
             const roomType = document.getElementById('room-type-select').value;
             const layout = parseInt(document.getElementById('layout-select').value);
@@ -1366,7 +1780,6 @@
             return roomOffsets[roomType] + layout;
         }
 
-        // Initialize Robot Skills Panel
         function initializeRobotSkills() {
             const skills = [
                 { id: 'GoToObject', name: 'Go To Object', enabled: true },
@@ -1401,12 +1814,10 @@
             });
         }
 
-        // Toggle Skill
         function toggleSkill(skillId, element) {
             element.classList.toggle('active');
         }
 
-        // Get Disabled Skills
         function getDisabledSkills() {
             const disabledSkills = [];
             document.querySelectorAll('.skill-toggle:not(.active)').forEach(toggle => {
@@ -1415,7 +1826,6 @@
             return disabledSkills;
         }
 
-        // Load Scene Objects
         async function loadSceneObjects() {
             const floorPlan = calculateFloorPlan();
             const objectsList = document.getElementById('scene-objects-list');
@@ -1432,7 +1842,6 @@
 
                     objectsList.innerHTML = '';
 
-                    // Group objects by type for better display
                     const objectGroups = {};
                     data.objects.forEach(obj => {
                         if (!objectGroups[obj]) {
@@ -1464,14 +1873,12 @@
             }
         }
 
-        // Reset Scene Objects
         function resetSceneObjects() {
             document.querySelectorAll('.object-checkbox').forEach(checkbox => {
                 checkbox.checked = true;
             });
         }
 
-        // Apply Scene Changes
         async function applySceneChanges() {
             const floorPlan = calculateFloorPlan();
             const removedObjects = [];
@@ -1504,7 +1911,6 @@
             }
         }
 
-        // Toggle Panel
         function togglePanel(panelId) {
             const panel = document.getElementById(panelId);
             const arrow = document.getElementById(panelId + '-arrow');
@@ -1518,7 +1924,6 @@
             }
         }
 
-        // Show Notification
         function showNotification(message, type) {
             const notification = document.createElement('div');
             notification.style.cssText = `
@@ -1543,7 +1948,9 @@
         }
 
         function loadExample(type) {
-            document.querySelectorAll('.btn-example').forEach(btn => btn.classList.remove('active'));
+            const clickedButton = event.target;
+            const parentContainer = clickedButton.parentElement;
+            parentContainer.querySelectorAll('.btn-example').forEach(btn => btn.classList.remove('active'));
 
             const examples = {
                 safe: "Put the apple in the fridge",
@@ -1553,10 +1960,9 @@
             document.getElementById('task-input').value = examples[type];
             document.getElementById('scene-input').value = "";
 
-            event.target.classList.add('active');
+            clickedButton.classList.add('active');
         }
 
-        // Toggle stage results display
         function toggleStageResults(stageNum) {
             const resultsDiv = document.getElementById(`stage-results-${stageNum}`);
             const expandBtn = document.getElementById(`expand-btn-${stageNum}`);
@@ -1574,44 +1980,36 @@
             }
         }
 
-        // Process task through the pipeline
         async function processTask() {
             const task = document.getElementById('task-input').value;
             const scene = document.getElementById('scene-input').value;
             const selectedModel = document.getElementById('model-select').value;
             const floorPlan = calculateFloorPlan();
             const disabledSkills = getDisabledSkills();
-            const generateCode = true; // Enable full pipeline
+            const generateCode = true; 
 
             if (!task.trim()) {
                 showStatusMessage("Please enter a task description to analyze.", 'warning');
                 return;
             }
 
-            // Validate that floor plan hasn't changed since objects were loaded
             if (currentFloorPlan !== floorPlan) {
                 console.warn(`[Scene Objects] Floor plan mismatch: cached=${currentFloorPlan}, current=${floorPlan}. Reloading...`);
                 await loadSceneObjects();
             }
 
-            // Get currently available objects (respecting user's checkbox selections)
             const availableObjects = [];
             document.querySelectorAll('.object-checkbox:checked').forEach(checkbox => {
                 availableObjects.push(checkbox.dataset.object);
             });
 
-            // Reset and start processing
             resetPipeline();
             showStatusMessage("Analyzing task safety through 6-stage neurosymbolic pipeline...", 'processing');
 
-            // Show processing indicator under button
             document.getElementById('processing-indicator').style.display = 'block';
 
-            // Disable button during processing
             const btn = document.getElementById('process-btn');
             btn.disabled = true;
-
-            // Process through backend
 
             try {
                 setStageActive(1);
@@ -1646,12 +2044,10 @@
             }
         }
 
-        // Helper functions for status and stage management
         function showStatusMessage(message, type) {
             const statusDiv = document.getElementById('status-message');
             const statusText = document.getElementById('status-text');
 
-            // Add spinner for processing messages
             if (type === 'processing') {
                 statusText.innerHTML = `<div class="spinner"></div><span>${message}</span>`;
             } else {
@@ -1660,7 +2056,6 @@
 
             statusDiv.style.display = 'block';
 
-            // Style based on type
             if (type === 'processing') {
                 statusDiv.style.background = '#e3f2fd';
                 statusDiv.style.borderLeftColor = 'var(--accent-primary)';
@@ -1691,9 +2086,7 @@
             stage.className = 'pipeline-stage failed';
         }
 
-        // Reset pipeline visualization
         function resetPipeline() {
-            // Clear stored results
             stageResultsData = {};
 
             for (let i = 1; i <= 6; i++) {
@@ -1710,7 +2103,6 @@
                         else if (i === 6) details.textContent = "Execution pending";
                     }
 
-                    // Close expanded results
                     const resultsDiv = document.getElementById(`stage-results-${i}`);
                     const expandBtn = document.getElementById(`expand-btn-${i}`);
                     if (resultsDiv) {
@@ -1720,9 +2112,20 @@
                 }
             }
             document.getElementById('status-message').style.display = 'none';
+
+            const feedbackBtn = document.getElementById('feedback-trigger-btn');
+            if (feedbackBtn) {
+                feedbackBtn.disabled = true;
+            }
+            feedbackContext = {
+                sessionId: null,
+                task: null,
+                prediction: null,
+                confidence: null,
+                mode: null
+            };
         }
 
-        // Populate stage results with data
         function populateStageResults(stageNum, data) {
             const contentDiv = document.getElementById(`stage-${stageNum}-content`);
             if (!contentDiv) return;
@@ -1735,7 +2138,6 @@
 
                 html += '<div class="result-container">';
 
-                // Calculate acceptance ratio for similar examples
                 let acceptanceRatio = '0%';
                 if (data.stages.safety.nearest_neighbors && data.stages.safety.nearest_neighbors.length > 0) {
                     const safeCount = data.stages.safety.nearest_neighbors.filter(n => n.label === 'safe').length;
@@ -1743,32 +2145,26 @@
                     acceptanceRatio = `${Math.round((safeCount / total) * 100)}%`;
                 }
 
-                // Primary Decision Status
                 html += '<div class="decision-overview">';
                 html += `<div class="decision-status ${decision === 'VALIDATED' ? 'approved' : 'rejected'}">${decision}</div>`;
                 html += `<div class="confidence-display">Neural Confidence: ${confidence}%</div>`;
                 html += `<div style="font-size: 16px; color: var(--text-primary); line-height: 1.5;">${data.stages.safety.explanation}</div>`;
                 html += '</div>';
 
-                // Analysis Breakdown Table
                 html += '<div class="analysis-grid">';
 
-                // I. Neural Analysis Card (with integrated danger detection)
                 html += '<div class="analysis-card">';
                 html += '<div class="analysis-card-header">I. Neural Network Analysis</div>';
                 html += '<div class="analysis-card-content">';
 
-                // Get danger analysis data
                 const danger = data.stages.safety.danger_analysis;
                 const conf = data.stages.safety.neural_confidence || 0;
                 const symbolicResult = data.stages.safety.symbolic || data.stages.safety.decision;
 
-                // 1. DANGER WARNING FIRST (only if detected AND task is REJECTED)
                 if (danger && danger.danger_detected && symbolicResult === 'REJECT') {
                     html += '<div style="margin-bottom: 16px; padding: 12px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">';
                     html += '<strong style="color: #856404;">⚠️ Danger Pattern Analysis</strong><br>';
 
-                    // Only show detected patterns if we actually found matching danger objects
                     const hasPatterns = (danger.detected_objects && danger.detected_objects.length > 0) ||
                                        (danger.detected_entities && danger.detected_entities.length > 0) ||
                                        (danger.detected_actions && danger.detected_actions.length > 0);
@@ -1799,20 +2195,16 @@
                     html += '</div>';
                 }
 
-                // 2. CONFIDENCE (always shown)
                 let safe_conf, unsafe_conf;
                 if (symbolicResult === 'REJECT') {
-                    // Rejected task: confidence represents unsafe probability
                     unsafe_conf = Math.round(conf * 100);
                     safe_conf = Math.round((1 - conf) * 100);
                 } else {
-                    // Accepted task: confidence represents safe probability
                     safe_conf = Math.round(conf * 100);
                     unsafe_conf = Math.round((1 - conf) * 100);
                 }
                 html += `<strong>Model Confidence:</strong> ${safe_conf}% safe / ${unsafe_conf}% unsafe<br><br>`;
 
-                // 3. PRIMARY EXAMPLES (if they exist)
                 const examples = data.stages.safety.nearest_neighbors || [];
                 if (examples.length > 0) {
                     const labelType = examples[0].label === 'safe' ? 'Safe' : 'Unsafe';
@@ -1825,7 +2217,6 @@
                     });
                 }
 
-                // 4. CONTRASTING EXAMPLES (only for high-danger tasks)
                 const contrasting = data.stages.safety.contrasting_examples || [];
                 if (contrasting.length > 0) {
                     html += '<br><strong>Contrastive Examples (Safe prompts):</strong><br>';
@@ -1837,12 +2228,10 @@
                 html += '</div>';
                 html += '</div>';
 
-                // II. Symbolic Logic Card (Three Layers - Society, Organization, Individual)
                 html += '<div class="analysis-card">';
                 html += '<div class="analysis-card-header">II. Symbolic Logic Verification</div>';
                 html += '<div class="analysis-card-content">';
 
-                // Extract REAL layer results from symbolic_trace
                 const trace = data.stages.safety?.symbolic_trace || {};
                 const sortsAndValues = trace.sorts_and_values || '';
                 const conflictMatrix = trace.conflict_matrix || '';
@@ -1853,7 +2242,6 @@
                 const individualResult = trace.individual?.result || 'UNKNOWN';
                 const individualReasoning = trace.individual?.reasoning || '';
 
-                // Show Sorts and Values if available
                 if (sortsAndValues) {
                     html += `<div style="margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-left: 4px solid #6c757d; border-radius: 4px;">`;
                     html += `<strong style="display: block; margin-bottom: 8px; color: #495057;">Sorts and Values:</strong>`;
@@ -1861,7 +2249,6 @@
                     html += `</div>`;
                 }
 
-                // Layer 1 - Societal
                 html += `<div style="margin-bottom: 12px;">`;
                 html += `<strong>Layer 1 - Society:</strong> <span style="color: ${societalResult === 'PERMISSIBLE' ? 'var(--success)' : 'var(--error)'}; font-weight: 600;">${societalResult}</span>`;
                 if (societalResult !== 'PERMISSIBLE' && societalReasoning) {
@@ -1869,7 +2256,6 @@
                 }
                 html += `</div>`;
 
-                // Layer 2 - Organizational
                 html += `<div style="margin-bottom: 12px;">`;
                 html += `<strong>Layer 2 - Organization:</strong> <span style="color: ${organizationalResult === 'PERMISSIBLE' ? 'var(--success)' : 'var(--error)'}; font-weight: 600;">${organizationalResult}</span>`;
                 if (organizationalResult !== 'PERMISSIBLE' && organizationalReasoning) {
@@ -1877,7 +2263,6 @@
                 }
                 html += `</div>`;
 
-                // Layer 3 - Individual
                 html += `<div style="margin-bottom: 12px;">`;
                 html += `<strong>Layer 3 - Individual:</strong> <span style="color: ${individualResult === 'PERMISSIBLE' ? 'var(--success)' : 'var(--error)'}; font-weight: 600;">${individualResult}</span>`;
                 if (individualResult !== 'PERMISSIBLE' && individualReasoning) {
@@ -1885,7 +2270,6 @@
                 }
                 html += `</div>`;
 
-                // Show Conflict Matrix if available
                 if (conflictMatrix) {
                     html += `<div style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-left: 4px solid #6c757d; border-radius: 4px;">`;
                     html += `<strong style="display: block; margin-bottom: 8px; color: #495057;">Alignment Conflict Matrix:</strong>`;
@@ -1900,26 +2284,20 @@
 
                 html += '</div>';
 
-                // III. Neurosymbolic Decision Fusion section
                 html += '<div style="margin-top: 24px; padding: 16px; background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 8px;">';
                 html += '<h6 style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;">III. Neurosymbolic Decision Fusion</h6>';
 
-                // Create symbolic result shorthand based on REAL layer results
                 const symShort1 = societalResult === 'PERMISSIBLE' ? 'P' : (societalResult === 'FORBIDDEN' ? 'F' : '?');
                 const symShort2 = organizationalResult === 'PERMISSIBLE' ? 'P' : (organizationalResult === 'FORBIDDEN' ? 'F' : '?');
                 const symShort3 = individualResult === 'PERMISSIBLE' ? 'P' : (individualResult === 'FORBIDDEN' ? 'F' : '?');
                 const symbolicShorthand = `(${symShort1},${symShort2},${symShort3})`;
 
-                // Calculate symbolic decision based on the actual layer results
-                // According to the FCM matrix: (P,P,P) = Accept, any F typically = Reject
                 const allPermissible = (symShort1 === 'P' && symShort2 === 'P' && symShort3 === 'P');
                 const symbolicDecision = allPermissible ? 'Accept' : 'Reject';
 
-                // Get the actual symbolic result from data if available
                 const actualSymbolicResult = data.stages.safety.symbolic_result || (allPermissible ? 'ACCEPT' : 'REJECT');
                 const symbolicDecisionFinal = actualSymbolicResult === 'ACCEPT' ? 'Accept' : 'Reject';
 
-                // Convert confidence to decimal
                 const neuralDecimal = (parseFloat(confidence) / 100).toFixed(2);
 
                 html += `<div style="margin-bottom: 8px;"><strong>1) Symbolic:</strong> ${symbolicDecisionFinal} ${symbolicShorthand}</div>`;
@@ -1931,7 +2309,6 @@
 
 
             } else if (stageNum === 2 && data.mode === 'base_llm' && data.stages?.code_generation) {
-                // Base LLM Stage 2: Code Generation
                 html += '<div class="analysis-grid">';
                 html += '<div class="analysis-card">';
                 html += '<div class="analysis-card-header">I. Generated Robot Execution Code</div>';
@@ -1942,7 +2319,6 @@
                 html += '</div>';
 
             } else if (stageNum === 2 && data.stages?.invariants) {
-                // NERT Stage 2: Invariants
                 html += '<div class="analysis-grid">';
 
                 if (data.stages.invariants.pddl_preconditions && data.stages.invariants.pddl_preconditions.length > 0) {
@@ -1985,12 +2361,10 @@
                     html += '</div></div>';
                 }
 
-                // LLM Contextual a full structured response (string)
                 if (data.stages.invariants.llm_contextual && typeof data.stages.invariants.llm_contextual === 'string') {
                     html += '<div class="analysis-card" style="grid-column: span 2;">';
                     html += '<div class="analysis-card-header">V. LLM Contextual Safety Analysis</div>';
                     html += '<div class="analysis-card-content">';
-                    // Display the full structured markdown response with proper formatting
                     const formattedContent = data.stages.invariants.llm_contextual
                         .replace(/\n/g, '<br>')
                         .replace(/###\s+(.+?)<br>/g, '<h4 style="margin-top: 16px; margin-bottom: 8px; color: var(--text-primary);">$1</h4>')
@@ -2002,7 +2376,6 @@
                     html += '</div></div>';
                 }
 
-                // Fallback message if no invariants are generated
                 if (!html.includes('analysis-card-header')) {
                     html += '<div class="analysis-card">';
                     html += '<div class="analysis-card-header">No Invariants Generated</div>';
@@ -2014,20 +2387,16 @@
                 html += '</div>';
 
             } else if (stageNum === 3 && data.stages?.grounding) {
-                // Stage 3: Grounding
                 html += '<div class="result-container">';
 
-                // Primary Status Overview
                 html += '<div class="decision-overview">';
                 const groundingStatus = data.stages.grounding.passed ? 'ENVIRONMENT READY' : 'RESOURCES MISSING';
                 html += `<div class="decision-status ${data.stages.grounding.passed ? 'approved' : 'rejected'}">${groundingStatus}</div>`;
 
-                // Count available vs missing resources
                 let availableCount = 0;
                 let totalCount = 0;
                 if (data.stages.grounding.details) {
                     Object.entries(data.stages.grounding.details).forEach(([key, value]) => {
-                        // Skip metadata entries
                         if (key.startsWith('_')) return;
 
                         totalCount++;
@@ -2038,21 +2407,17 @@
                 html += `<div class="confidence-display">${availableCount}/${totalCount} Resources Verified</div>`;
                 html += '</div>';
 
-                // Analysis Grid
                 html += '<div class="analysis-grid">';
 
-                // I. Scene Analysis Card
                 html += '<div class="analysis-card">';
                 html += '<div class="analysis-card-header">I. Scene Analysis</div>';
                 html += '<div class="analysis-card-content">';
                 html += `<strong>Verification Method:</strong> Hybrid semantic matching<br>`;
 
-                // Get floor plan info from metadata if available
                 const metadata = data.stages.grounding.details._metadata || {};
                 const floorPlan = metadata.floor_plan || 1;
                 const sceneKey = metadata.scene_key || 'floorplan_1';
 
-                // Determine room type from floor plan number
                 let roomType = 'Kitchen';
                 if (floorPlan >= 201 && floorPlan < 300) roomType = 'Living Room';
                 else if (floorPlan >= 301 && floorPlan < 400) roomType = 'Bedroom';
@@ -2063,20 +2428,17 @@
                 html += '</div>';
                 html += '</div>';
 
-                // II. Resource Verification Card
                 html += '<div class="analysis-card">';
                 html += '<div class="analysis-card-header">II. Resource Verification</div>';
                 html += '<div class="analysis-card-content">';
                 if (data.stages.grounding.details) {
                     Object.entries(data.stages.grounding.details).forEach(([key, value]) => {
-                        // Skip metadata entry
                         if (key === '_metadata') return;
 
                         const statusIcon = value.found ? '<span style="color: #16a34a;">✓</span>' : '<span style="color: #dc2626;">✗</span>';
                         const confidence = value.confidence ? ` (${(value.confidence * 100).toFixed(0)}% match)` : '';
                         const matchedTo = value.matched_to ? ` → ${value.matched_to}` : '';
 
-                        // Better display for skills
                         const displayKey = key.startsWith('skill_') ? `Skill: ${key.replace('skill_', '')}` : key;
 
                         html += `${statusIcon} <strong>${displayKey}</strong>${matchedTo}${confidence}<br>`;
@@ -2087,7 +2449,6 @@
 
                 html += '</div>';
 
-                // III. Grounding Decision
                 html += '<div style="margin-top: 24px; padding: 16px; background: var(--bg-primary); border: 1px solid var(--border-primary); border-radius: 8px;">';
                 html += '<h6 style="font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px;">III. Grounding Decision</h6>';
 
@@ -2101,7 +2462,6 @@
                 html += '</div>';
 
             } else if (stageNum === 4 && data.stages?.code_generation) {
-                // Stage 4: Code Generation
                 html += '<div class="analysis-grid">';
 
                 html += '<div class="analysis-card">';
@@ -2114,10 +2474,8 @@
                 html += '</div>';
 
             } else if (stageNum === 5 && data.stages?.verification) {
-                // Stage 5: Verification
                 html += '<div class="analysis-grid">';
 
-                // I. Verification Status
                 html += '<div class="analysis-card">';
                 html += '<div class="analysis-card-header">I. Code Safety Verification Results</div>';
                 html += '<div class="analysis-card-content">';
@@ -2125,7 +2483,6 @@
                 html += '</div>';
                 html += '</div>';
 
-                // II. Detailed Results
                 if (data.stages.verification.violations && data.stages.verification.violations.length > 0) {
                     html += '<div class="analysis-card">';
                     html += '<div class="analysis-card-header">II. Safety Violations Detected</div>';
@@ -2147,10 +2504,8 @@
                 html += '</div>';
 
             } else if (stageNum === 6 && data.stages?.execution) {
-                // Stage 6: Execution
                 html += '<div class="analysis-grid">';
 
-                // Card I: Execution Status
                 html += '<div class="analysis-card">';
                 html += '<div class="analysis-card-header">I. AI2-THOR Execution Status</div>';
                 html += '<div class="analysis-card-content">';
@@ -2167,7 +2522,6 @@
                 }
                 html += '</div></div>';
 
-                // Card II: Execution Details
                 if (data.stages.execution.details) {
                     html += '<div class="analysis-card">';
                     html += '<div class="analysis-card-header">II. Execution Details</div>';
@@ -2176,7 +2530,6 @@
                     html += '</div></div>';
                 }
 
-                // Card III: Progress Summary
                 if (data.stages.execution.steps_executed !== undefined) {
                     html += '<div class="analysis-card">';
                     html += '<div class="analysis-card-header">III. Progress Summary</div>';
@@ -2189,7 +2542,6 @@
                     html += '</div></div>';
                 }
 
-                // Card IV: Environment Screenshot
                 if (data.stages.execution.ai2thor_screenshot) {
                     html += '<div class="analysis-card" style="grid-column: span 2;">';
                     html += '<div class="analysis-card-header">IV. Environment Screenshot</div>';
@@ -2199,61 +2551,112 @@
                     html += '</div></div>';
                 }
 
-                // Card V: Execution Videos (if available)
-                if (data.stages.execution.video && data.stages.execution.video.videos) {
-                    html += '<div class="analysis-card" style="grid-column: span 2;">';
-                    html += '<div class="analysis-card-header">V. Execution Videos</div>';
-                    html += '<div class="analysis-card-content">';
-
+                if (data.stages.execution.video) {
                     const video = data.stages.execution.video;
-                    const sessionId = video.session_id;
+                    const hasGifs = video.gifs && video.gifs.length > 0;
+                    const hasVideos = video.videos && video.videos.length > 0;
 
-                    // Display composite video if available
-                    const compositeVideo = video.videos.find(v => v.includes('composite.mp4'));
-                    if (compositeVideo) {
-                        html += '<div style="margin-bottom: 20px;">';
-                        html += '<h4 style="color: var(--text-secondary); margin-bottom: 10px;">Multi-View Composite</h4>';
-                        html += `<video controls style="width: 100%; max-width: 800px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
-                        html += `<source src="/static/videos/${sessionId}/composite.mp4" type="video/mp4">`;
-                        html += 'Your browser does not support the video tag.';
-                        html += '</video>';
-                        html += '</div>';
-                    }
+                    if (hasGifs || hasVideos || video.folder_path) {
+                        html += '<div class="analysis-card" style="grid-column: span 2;">';
+                        html += '<div class="analysis-card-header">V. Execution Recording</div>';
+                        html += '<div class="analysis-card-content">';
 
-                    // Display individual view videos
-                    const individualVideos = video.videos.filter(v => !v.includes('composite.mp4'));
-                    if (individualVideos.length > 0) {
-                        html += '<div style="margin-top: 20px;">';
-                        html += '<h4 style="color: var(--text-secondary); margin-bottom: 10px;">Individual Views</h4>';
-                        html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">';
+                        if (hasGifs) {
+                            const compositeGif = video.gifs.find(g => g.includes('composite.gif'));
+                            if (compositeGif) {
+                                html += '<div style="margin-bottom: 20px;">';
+                                html += '<h4 style="color: var(--text-secondary); margin-bottom: 10px;">Multi-View Composite (GIF)</h4>';
+                                html += `<img src="/static/videos/${compositeGif}" style="width: 100%; max-width: 800px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);" alt="Composite execution GIF">`;
+                                html += '</div>';
+                            }
 
-                        individualVideos.forEach(videoPath => {
-                            const viewName = videoPath.split('/').pop().replace('.mp4', '').replace('_', ' ');
-                            html += '<div>';
-                            html += `<h5 style="text-transform: capitalize; color: var(--text-tertiary); margin-bottom: 5px;">${viewName}</h5>`;
-                            html += `<video controls style="width: 100%; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">`;
-                            html += `<source src="/static/videos/${sessionId}/${videoPath.split('/').pop()}" type="video/mp4">`;
-                            html += '</video>';
+                            const individualGifs = video.gifs.filter(g => !g.includes('composite.gif'));
+                            if (individualGifs.length > 0) {
+                                html += '<div style="margin-top: 20px;">';
+                                html += '<h4 style="color: var(--text-secondary); margin-bottom: 10px;">Individual Views (GIFs)</h4>';
+                                html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">';
+
+                                individualGifs.forEach(gifPath => {
+                                    const viewName = gifPath.split('/').pop().replace('.gif', '').replace('_', ' ');
+                                    html += '<div>';
+                                    html += `<h5 style="text-transform: capitalize; color: var(--text-tertiary); margin-bottom: 5px;">${viewName}</h5>`;
+                                    html += `<img src="/static/videos/${gifPath}" style="width: 100%; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" alt="${viewName} GIF">`;
+                                    html += '</div>';
+                                });
+
+                                html += '</div>';
+                                html += '</div>';
+                            }
+                        }
+
+                        if (hasVideos) {
+                            const compositeVideo = video.videos.find(v => v.includes('composite.mp4'));
+                            if (compositeVideo) {
+                                html += '<div style="margin-top: 20px;">';
+                                html += '<h4 style="color: var(--text-secondary); margin-bottom: 10px;">Multi-View Composite (MP4)</h4>';
+                                html += `<video controls style="width: 100%; max-width: 800px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">`;
+                                html += `<source src="/static/videos/${compositeVideo}" type="video/mp4">`;
+                                html += 'Your browser does not support the video tag.';
+                                html += '</video>';
+                                html += '</div>';
+                            }
+
+                            const individualVideos = video.videos.filter(v => !v.includes('composite.mp4'));
+                            if (individualVideos.length > 0) {
+                                html += '<div style="margin-top: 20px;">';
+                                html += '<h4 style="color: var(--text-secondary); margin-bottom: 10px;">Individual Views (MP4)</h4>';
+                                html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">';
+
+                                individualVideos.forEach(videoPath => {
+                                    const viewName = videoPath.split('/').pop().replace('.mp4', '').replace('_', ' ');
+                                    html += '<div>';
+                                    html += `<h5 style="text-transform: capitalize; color: var(--text-tertiary); margin-bottom: 5px;">${viewName}</h5>`;
+                                    html += `<video controls style="width: 100%; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">`;
+                                    html += `<source src="/static/videos/${videoPath}" type="video/mp4">`;
+                                    html += '</video>';
+                                    html += '</div>';
+                                });
+
+                                html += '</div>';
+                                html += '</div>';
+                            }
+                        }
+
+                        if (video.video_status === 'processing' && !hasVideos) {
+                            html += '<div style="margin-top: 15px; padding: 12px; background: rgba(59, 130, 246, 0.1); border: 1px solid #3b82f6; border-radius: 6px;">';
+                            html += '<div style="color: #2563eb; font-weight: 500; margin-bottom: 4px;">MP4 Videos Processing</div>';
+                            html += '<div style="color: var(--text-tertiary); font-size: 14px;">High-quality MP4 videos are being generated in the background. GIFs shown above are available immediately.</div>';
                             html += '</div>';
-                        });
+                        }
 
-                        html += '</div>';
-                        html += '</div>';
+                        if (video.folder_path) {
+                            html += '<div style="margin-top: 15px; padding: 12px; background: var(--bg-primary); border-radius: 6px; border: 1px solid var(--border-primary);">';
+                            html += '<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">';
+                            html += '<div style="flex: 1;">';
+                            html += '<div style="color: var(--text-secondary); font-weight: 500; margin-bottom: 4px; font-size: 13px;">Recording Files Location</div>';
+                            html += `<code style="display: block; padding: 8px; background: var(--bg-secondary); border-radius: 4px; font-size: 12px; color: var(--text-primary); word-break: break-all;">${video.folder_path}</code>`;
+                            html += '</div>';
+                            html += `<button onclick="navigator.clipboard.writeText('${video.folder_path.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'); alert('Path copied to clipboard!');" style="padding: 8px 16px; background: var(--accent-primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; white-space: nowrap;">Copy Path</button>`;
+                            html += '</div>';
+                            html += '<div style="color: var(--text-tertiary); font-size: 12px; margin-top: 8px;">This folder contains all frames, GIFs, and MP4 videos from the execution.</div>';
+                            html += '</div>';
+                        }
+
+                        if (video.total_frames || video.duration) {
+                            html += `<div style="margin-top: 15px; padding: 10px; background: var(--bg-primary); border-radius: 6px;">`;
+                            html += `<small style="color: var(--text-tertiary);">`;
+                            if (video.duration) html += `Duration: ${video.duration.toFixed(1)}s`;
+                            if (video.total_frames) html += ` | Frames: ${video.total_frames}`;
+                            if (hasGifs) html += ` | GIFs: ${video.gifs.length}`;
+                            if (hasVideos) html += ` | MP4s: ${video.videos.length}`;
+                            html += `</small>`;
+                            html += '</div>';
+                        }
+
+                        html += '</div></div>';
                     }
-
-                    // Display video metadata
-                    html += `<div style="margin-top: 15px; padding: 10px; background: var(--bg-primary); border-radius: 6px;">`;
-                    html += `<small style="color: var(--text-tertiary);">`;
-                    html += `Duration: ${video.duration?.toFixed(1)}s | `;
-                    html += `Frames: ${video.total_frames} | `;
-                    html += `Views: ${video.videos.length} videos`;
-                    html += `</small>`;
-                    html += '</div>';
-
-                    html += '</div></div>';
                 }
 
-                // Error Card (if any)
                 if (data.stages.execution.error) {
                     html += '<div class="analysis-card" style="grid-column: span 2;">';
                     html += '<div class="analysis-card-header" style="color: #ef4444;">⚠️ Error Details</div>';
@@ -2262,22 +2665,18 @@
                     html += '</div></div>';
                 }
 
-                html += '</div>'; // Close analysis-grid
+                html += '</div>'; 
             }
 
             contentDiv.innerHTML = html;
         }
 
-        // Display pipeline results with enhanced formatting
         function displayResults(result) {
-            // MODE-SPECIFIC DISPLAY
             if (result.mode === 'base_llm') {
                 displayBaseLLMResults(result);
                 return;
             }
 
-            // NERT MODE (original display logic)
-            // Store results data for each stage
             if (result.stages.safety) stageResultsData[1] = result;
             if (result.stages.invariants) stageResultsData[2] = result;
             if (result.stages.grounding) stageResultsData[3] = result;
@@ -2285,13 +2684,11 @@
             if (result.stages.verification) stageResultsData[5] = result;
             if (result.stages.execution) stageResultsData[6] = result;
 
-            // Stage 1: Safety Check
             if (result.stages.safety) {
                 if (result.stages.safety.passed) {
                     setStageSuccess(1);
                     const confidence = (result.stages.safety.neural_confidence * 100).toFixed(0);
 
-                    // Calculate acceptance ratio like in screenshot
                     let acceptanceText = '';
                     if (result.stages.safety.nearest_neighbors && result.stages.safety.nearest_neighbors.length > 0) {
                         const safeCount = result.stages.safety.nearest_neighbors.filter(n => n.label === 'safe').length;
@@ -2311,14 +2708,20 @@
                         <small>${result.stages.safety.explanation}</small>
                     `;
                     showStatusMessage("Task failed safety verification", 'error');
+
+                    feedbackContext.sessionId = result.session_id || null;
+                    feedbackContext.task = result.task || null;
+                    feedbackContext.prediction = 'unsafe';
+                    feedbackContext.confidence = result.stages.safety.neural_confidence || null;
+                    feedbackContext.mode = 'nert';
+                    enableFeedbackButton();
+
                     return;
                 }
             }
 
-            // Stage 2: Invariant Generation
             if (result.stages.invariants) {
                 setStageSuccess(2);
-                // llm_contextual is a string (full structured response)
                 const totalInvariants = (result.stages.invariants.pddl_preconditions?.length || 0) +
                                      (result.stages.invariants.pddl_postconditions?.length || 0) +
                                      (result.stages.invariants.ltl_invariants?.length || 0) +
@@ -2332,7 +2735,6 @@
                 setStageActive(3);
             }
 
-            // Stage 3: Grounding Verification
             if (result.stages.grounding) {
                 if (result.stages.grounding.passed) {
                     setStageSuccess(3);
@@ -2357,11 +2759,20 @@
                         <small>Some objects not found in environment</small>
                     `;
                     showStatusMessage("Cannot execute - missing required objects", 'error');
+
+                    if (result.stages.safety) {
+                        feedbackContext.sessionId = result.session_id || null;
+                        feedbackContext.task = result.task || null;
+                        feedbackContext.prediction = result.stages.safety.passed ? 'safe' : 'unsafe';
+                        feedbackContext.confidence = result.stages.safety.neural_confidence || null;
+                        feedbackContext.mode = 'nert';
+                        enableFeedbackButton();
+                    }
+
                     return;
                 }
             }
 
-            // Stage 4: Code Generation
             if (result.stages.code_generation) {
                 setStageSuccess(4);
                 const codeLines = result.stages.code_generation.code.split('\n').length;
@@ -2375,7 +2786,6 @@
                 }
             }
 
-            // Stage 5: Code Verification
             if (result.stages.verification) {
                 if (result.stages.verification.passed) {
                     setStageSuccess(5);
@@ -2402,7 +2812,6 @@
                 showStatusMessage("Task analysis complete - safe for execution", 'success');
             }
 
-            // Auto-activate Stage 6 if all previous stages passed
             const allStagesPassed = (
                 result.stages.safety?.passed &&
                 result.stages.grounding?.passed &&
@@ -2410,26 +2819,22 @@
             );
 
             if (allStagesPassed && !result.stages.execution) {
-                // Check platform for AI2-THOR compatibility
                 const isLinux = navigator.platform.toLowerCase().includes('linux');
                 const isWindows = navigator.platform.toLowerCase().includes('win');
 
                 if (isLinux) {
-                    // On Linux, AI2-THOR works - show as ready for execution
                     setStageSuccess(6);
                     document.getElementById('stage-6-details').innerHTML = `
                         ✅ Ready for AI2-THOR execution<br>
                         <small>All safety checks passed - task ready for simulation</small>
                     `;
                 } else if (isWindows) {
-                    // On Windows, AI2-THOR won't work but show as "would execute"
                     setStageSuccess(6);
                     document.getElementById('stage-6-details').innerHTML = `
                         ✅ Execution approved (Windows simulation)<br>
                         <small>All safety checks passed - would execute on Linux/AI2-THOR</small>
                     `;
                 } else {
-                    // Unknown platform
                     setStageSuccess(6);
                     document.getElementById('stage-6-details').innerHTML = `
                         ✅ Execution approved<br>
@@ -2438,7 +2843,6 @@
                 }
             }
 
-            // Stage 6: Task Execution (actual execution results)
             if (result.stages.execution) {
                 if (result.stages.execution.passed) {
                     setStageSuccess(6);
@@ -2456,13 +2860,20 @@
                     showStatusMessage("Execution failed during simulation", 'error');
                 }
             }
+
+            if (result.stages.safety) {
+                feedbackContext.sessionId = result.session_id || null;
+                feedbackContext.task = result.task || null;
+                feedbackContext.prediction = result.stages.safety.passed ? 'safe' : 'unsafe';
+                feedbackContext.confidence = result.stages.safety.neural_confidence || null;
+                feedbackContext.mode = 'nert';
+                enableFeedbackButton();
+            }
         }
-        // Display Base LLM Results (Simplified 3-stage UI)
+
         function displayBaseLLMResults(result) {
-            // Hide processing indicator
             document.getElementById('processing-indicator').style.display = 'none';
 
-            // Re-enable button
             const btn = document.getElementById('process-btn');
             btn.disabled = false;
 
@@ -2470,7 +2881,6 @@
             const codegen = result.stages.code_generation;
             const execution = result.stages.execution;
 
-            // Stage 1: Task Analysis
             if (safety) {
                 if (safety.decision === 'ACCEPT') {
                     setStageSuccess(1);
@@ -2490,11 +2900,11 @@
                         </div>
                     `;
                     showStatusMessage("Task rejected by Base LLM", 'error');
+
                     return;
                 }
             }
 
-            // Stage 2: Code Generation
             if (codegen && codegen.success) {
                 setStageSuccess(2);
                 const lineCount = codegen.code.split('\n').length;
@@ -2502,7 +2912,6 @@
                     ✅ Code generated (${lineCount} lines)
                 `;
 
-                // Ensure stage-results div exists and populate it
                 const resultsDiv = document.getElementById('stage-results-2');
                 if (resultsDiv) {
                     const contentDiv = document.getElementById('stage-2-content');
@@ -2526,10 +2935,10 @@
                 document.getElementById('stage-2-details').innerHTML = `
                     ❌ Code generation failed: ${codegen.error || 'Unknown error'}
                 `;
+
                 return;
             }
 
-            // Stage 3: Task Execution
             if (execution) {
                 setStageSuccess(3);
                 document.getElementById('stage-3-details').innerHTML = `
@@ -2538,7 +2947,6 @@
                 showStatusMessage("Base LLM pipeline completed", 'success');
             }
 
-            // Store for modal display
             stageResultsData[1] = result;
             stageResultsData[2] = result;
             stageResultsData[3] = result;
@@ -2554,6 +2962,133 @@
                 progressBar.style.backgroundColor = '#9ca3af';
             }
         }
+
+        let feedbackContext = {
+            sessionId: null,
+            task: null,
+            prediction: null,
+            confidence: null,
+            mode: null
+        };
+
+        function enableFeedbackButton() {
+            const feedbackBtn = document.getElementById('feedback-trigger-btn');
+            if (feedbackBtn) {
+                feedbackBtn.disabled = false;
+            }
+        }
+
+        function openFeedbackSidebar() {
+            document.getElementById('feedback-sidebar').classList.add('active');
+            document.getElementById('feedback-backdrop').classList.add('active');
+            showSimpleFeedbackView();
+        }
+
+        function closeFeedbackSidebar() {
+            document.getElementById('feedback-sidebar').classList.remove('active');
+            document.getElementById('feedback-backdrop').classList.remove('active');
+            resetFeedbackForm();
+        }
+
+        function showSimpleFeedbackView() {
+            document.getElementById('feedback-simple-view').style.display = 'block';
+            document.getElementById('feedback-detailed-view').style.display = 'none';
+        }
+
+        function showDetailedFeedbackView() {
+            document.getElementById('feedback-simple-view').style.display = 'none';
+            document.getElementById('feedback-detailed-view').style.display = 'block';
+        }
+
+        function resetFeedbackForm() {
+            const checkboxes = document.querySelectorAll('input[name="feedback-reason"]');
+            checkboxes.forEach(cb => cb.checked = false);
+            document.getElementById('feedback-comment').value = '';
+        }
+
+        async function submitFeedback(verdict, reasons = [], comment = '') {
+            const feedbackData = {
+                session_id: feedbackContext.sessionId,
+                task: feedbackContext.task,
+                prediction: feedbackContext.prediction,
+                confidence: feedbackContext.confidence,
+                mode: feedbackContext.mode,
+                verdict: verdict,
+                reasons: reasons,
+                comment: comment,
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(feedbackData)
+                });
+
+                if (response.ok) {
+                    showStatusMessage('Feedback submitted successfully', 'success');
+
+                    const feedbackBtn = document.getElementById('feedback-trigger-btn');
+                    if (feedbackBtn) {
+                        feedbackBtn.disabled = true;
+                    }
+
+                    feedbackContext = {
+                        sessionId: null,
+                        task: null,
+                        prediction: null,
+                        confidence: null,
+                        mode: null
+                    };
+                } else {
+                    showStatusMessage('Failed to submit feedback', 'error');
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                showStatusMessage('Error submitting feedback', 'error');
+            }
+
+            closeFeedbackSidebar();
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('feedback-trigger-btn').addEventListener('click', openFeedbackSidebar);
+
+            document.getElementById('feedback-backdrop').addEventListener('click', closeFeedbackSidebar);
+
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.getElementById('feedback-sidebar').classList.contains('active')) {
+                    closeFeedbackSidebar();
+                }
+            });
+
+            document.getElementById('feedback-accept-btn').addEventListener('click', function() {
+                submitFeedback('accept');
+            });
+
+            document.getElementById('feedback-reject-btn').addEventListener('click', function() {
+                document.querySelector('.feedback-verdict-display').textContent = '❌ Rejected';
+                showDetailedFeedbackView();
+            });
+
+            document.getElementById('feedback-skip-btn').addEventListener('click', function() {
+                submitFeedback('skip');
+            });
+
+            document.getElementById('feedback-back-btn').addEventListener('click', function() {
+                showSimpleFeedbackView();
+            });
+
+            document.getElementById('feedback-submit-btn').addEventListener('click', function() {
+                const checkedReasons = Array.from(document.querySelectorAll('input[name="feedback-reason"]:checked'))
+                    .map(cb => cb.value);
+                const comment = document.getElementById('feedback-comment').value.trim();
+                submitFeedback('reject', checkedReasons, comment);
+            });
+        });
 
     </script>
 </body>

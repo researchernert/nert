@@ -1,19 +1,31 @@
 # nert/simulation/code_generator.py
 """Generate executable code with safety constraints."""
 
-from typing import Dict, List
+from typing import Dict, List, TYPE_CHECKING
 import ast
 import re
+
+if TYPE_CHECKING:
+    from core.llm_clients import BaseLLMClient
 
 
 class SafetyConstrainedCodeGenerator:
     """Generate robot code that respects safety invariants."""
-    
-    def __init__(self, llm_client):
+
+    def __init__(self, llm_client: 'BaseLLMClient') -> None:
         self.llm = llm_client
     
-    def generate(self, task: str, invariants: Dict, scene_objects: List[str]) -> str:
-        """Generate robot action sequence for task execution."""
+    def generate(self, task: str, invariants: Dict, scene_objects: List[str], relations: List[Dict] = None) -> str:
+        relations_text = ""
+        if relations:
+            relations_text = f"""
+        Relations Summary (use these EXACT object names):
+        {relations}
+
+        CRITICAL: Use the exact object names and capitalization as they appear in the Relations Summary above.
+        For example, if Relations Summary shows "AlarmClock", use 'AlarmClock' not 'alarmclock'.
+        If Relations Summary shows "CoffeeTable", use 'CoffeeTable' not 'cofee table' or 'coffee table'.
+        """
 
         prompt = f"""
         Generate a sequence of robot actions to accomplish the following task.
@@ -21,7 +33,7 @@ class SafetyConstrainedCodeGenerator:
         Task: {task}
 
         Available objects in scene: {scene_objects}
-
+        {relations_text}
         IMPORTANT: You have access to ONE robot only. Use 'robot1' as the identifier (not robot2, robot3, etc.).
 
         Safety constraints that MUST be maintained:
@@ -94,7 +106,7 @@ class SafetyConstrainedCodeGenerator:
         for precond in invariants.get('pddl_preconditions', []):
             if 'exists' in precond:
                 obj = precond.split('(')[1].split(')')[0]
-                safety_checks.append(f"assert scene_has('{obj}'), 'Precondition failed: {obj} not found'")
+                safety_checks.append(f"assert scene_has('{obj}')")
         
         if safety_checks:
             code = '\n'.join(safety_checks) + '\n\n' + code

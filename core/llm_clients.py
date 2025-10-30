@@ -2,7 +2,7 @@ import os
 import json
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Callable, Tuple, Type
 import logging
 
 try:
@@ -19,7 +19,9 @@ class BaseLLMClient(ABC):
         self.model_name = model_name
         self.api_key = api_key
 
-    def _call_with_retry(self, api_call_func, retryable_exceptions: tuple, max_retries: int = 3):
+    def _call_with_retry(self, api_call_func: Callable[[], str],
+                         retryable_exceptions: Tuple[Type[Exception], ...],
+                         max_retries: int = 3) -> str:
         for attempt in range(max_retries):
             try:
                 return api_call_func()
@@ -48,7 +50,7 @@ class BaseLLMClient(ABC):
 
 class OpenAIClient(BaseLLMClient):
 
-    def __init__(self, model_name: str = "gpt-4o", api_key: str = None):
+    def __init__(self, model_name: str = "gpt-4o", api_key: Optional[str] = None) -> None:
         api_key = api_key or os.environ.get('OPENAI_API_KEY')
         if not api_key:
             raise ValueError("OpenAI API key is required")
@@ -85,13 +87,13 @@ class OpenAIClient(BaseLLMClient):
                 return response.choices[0].message.content
             except Exception as e:
                 logger.error(f"OpenAI API call failed: {e}")
-                raise Exception(f"OpenAI API error: {str(e)}")
+                raise
 
         return self._call_with_retry(api_call, retryable_exceptions)
 
 class GeminiClient(BaseLLMClient):
 
-    def __init__(self, model_name: str = "gemini-pro", api_key: str = None):
+    def __init__(self, model_name: str = "gemini-pro", api_key: Optional[str] = None) -> None:
         api_key = api_key or os.environ.get('GOOGLE_API_KEY')
         if not api_key:
             raise ValueError("Google API key is required")
@@ -152,13 +154,13 @@ class GeminiClient(BaseLLMClient):
                 return response.text
             except Exception as e:
                 logger.error(f"Gemini API call failed: {e}")
-                raise Exception(f"Gemini API error: {str(e)}")
+                raise
 
         return self._call_with_retry(api_call, retryable_exceptions)
 
 class AnthropicClient(BaseLLMClient):
 
-    def __init__(self, model_name: str = "claude-3-opus-20240229", api_key: str = None):
+    def __init__(self, model_name: str = "claude-3-opus-20240229", api_key: Optional[str] = None) -> None:
         api_key = api_key or os.environ.get('ANTHROPIC_API_KEY')
         if not api_key:
             raise ValueError("Anthropic API key is required")
@@ -195,7 +197,7 @@ class AnthropicClient(BaseLLMClient):
                 return response.content[0].text
             except Exception as e:
                 logger.error(f"Anthropic API call failed: {e}")
-                raise Exception(f"Anthropic API error: {str(e)}")
+                raise
 
         return self._call_with_retry(api_call, retryable_exceptions)
 
@@ -256,7 +258,7 @@ class LLMClientFactory:
     }
 
     @classmethod
-    def create_client(cls, model_id: str, api_key: str = None) -> BaseLLMClient:
+    def create_client(cls, model_id: str, api_key: Optional[str] = None) -> BaseLLMClient:
         if model_id not in cls.MODEL_REGISTRY:
             raise ValueError(f"Unknown model: {model_id}. Available models: {list(cls.MODEL_REGISTRY.keys())}")
 

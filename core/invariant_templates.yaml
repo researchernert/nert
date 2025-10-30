@@ -15,28 +15,104 @@
 pddl:
   pickup:
     preconditions:
-      - "exists({object})"
-      - "at(robot, {object})"
+      - "exists({obj})"
+      - "at(robot, {obj})"
       - "gripper_empty()"
     postconditions:
-      - "holding({object})"
-      - "not(at({object}, location))"
+      - "holding({obj})"
       - "not(gripper_empty())"
-  
+
   place:
     preconditions:
-      - "holding({object})"
+      - "holding({obj})"
       - "at(robot, {destination})"
     postconditions:
-      - "at({object}, {destination})"
-      - "not(holding({object}))"
+      - "{rel}({obj}, {destination})"
+      - "not(holding({obj}))"
       - "gripper_empty()"
-  
+
   navigate:
     preconditions:
       - "path_clear(robot, {destination})"
     postconditions:
       - "at(robot, {destination})"
+
+  open:
+    preconditions:
+      - "exists({target})"
+      - "at(robot, {target})"
+      - "not(opened({target}))"
+    postconditions:
+      - "opened({target})"
+
+  close:
+    preconditions:
+      - "exists({target})"
+      - "at(robot, {target})"
+      - "opened({target})"
+    postconditions:
+      - "not(opened({target}))"
+
+  switch_on:
+    preconditions:
+      - "exists({target})"
+      - "at(robot, {target})"
+      - "not(powered_on({target}))"
+    postconditions:
+      - "powered_on({target})"
+
+  switch_off:
+    preconditions:
+      - "exists({target})"
+      - "at(robot, {target})"
+      - "powered_on({target})"
+    postconditions:
+      - "not(powered_on({target}))"
+
+  slice:
+    preconditions:
+      - "exists({target})"
+      - "at(robot, {target})"
+      - "holding(knife)"
+      - "not(sliced({target}))"
+    postconditions:
+      - "sliced({target})"
+
+  break:
+    preconditions:
+      - "exists({target})"
+      - "at(robot, {target})"
+      - "not(broken({target}))"
+    postconditions:
+      - "broken({target})"
+
+  throw:
+    preconditions:
+      - "holding({obj})"
+    postconditions:
+      - "not(holding({obj}))"
+      - "thrown({obj})"
+
+  push:
+    preconditions:
+      - "exists({target})"
+      - "at(robot, {target})"
+    postconditions:
+      - "pushed({target})"
+
+  pull:
+    preconditions:
+      - "exists({target})"
+      - "at(robot, {target})"
+    postconditions:
+      - "pulled({target})"
+
+  drop:
+    preconditions:
+      - "holding({obj})"
+    postconditions:
+      - "not(holding({obj})"
+      - "gripper_empty()"
 
 ltl_templates:
   safety:

@@ -3,7 +3,10 @@ import sys
 import json
 import yaml
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from core.llm_clients import BaseLLMClient
 import logging
 from pathlib import Path
 
@@ -27,7 +30,7 @@ class SafetyResult:
 
 class DecomposedSymbolicChecker:
 
-    def __init__(self, llm_client, temperature: float = 0.7):
+    def __init__(self, llm_client: 'BaseLLMClient', temperature: float = 0.7) -> None:
         self.llm = llm_client
         self.debug_count = 0
         self.temperature = temperature
@@ -232,8 +235,8 @@ class DecomposedSymbolicChecker:
 
 class NeurosymbolicSafetyChecker:
 
-    def __init__(self, llm_client, config: Dict, temperature: float = 0.7,
-                 shared_confidence_estimator=None):
+    def __init__(self, llm_client: 'BaseLLMClient', config: Dict[str, Any], temperature: float = 0.7,
+                 shared_confidence_estimator: Optional[Any] = None) -> None:
         """
         Initialize safety checker.
 
@@ -375,8 +378,8 @@ class NeurosymbolicSafetyChecker:
 
     def _log_safety_results(self, decision: str, symbolic_result: str,
                             symbolic_trace: Dict, confidence: float,
-                            support_ratio: float, similar_examples: List,
-                            explanation: str):
+                            support_ratio: float, similar_examples: List[Dict],
+                            explanation: str) -> None:
         log_info("Symbolic Analysis:")
         log_substep(f"Result: {symbolic_result}")
 

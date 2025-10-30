@@ -13,12 +13,12 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Invariants:
-    """Container for all types of invariants."""
     pddl_preconditions: List[str]
     pddl_postconditions: List[str]
     ltl_invariants: List[str]
     stl_constraints: List[str]
-    llm_contextual: str  
+    llm_contextual: str
+    relations: List[Dict]  
 
 
 class HybridInvariantGenerator:
@@ -203,90 +203,213 @@ Do not include any explanation, just the JSON.
         return components
     
     def extract_pddl_conditions(self, task: str, scene_objects: Optional[List[str]] = None,
-                                 robot_skills: Optional[List[str]] = None) -> Dict:
-        """
-        Generate PDDL-style pre/postconditions for ALL object-destination pairs.
-
-        Uses LLM to extract components, then applies templates for formal correctness.
-        """
-        components = self.parse_task_components(task, scene_objects)
-
+                                 robot_skills: Optional[List[str]] = None,
+                                 semantic_context: Optional[str] = None) -> Dict:
         preconditions = []
         postconditions = []
 
-        objects = components.get('objects', [])
-        destinations = components.get('destinations', [])
-        actions = components.get('actions', [])
+        if semantic_context:
+            relations = self._extract_relations_from_semantic(semantic_context)
 
-        if not objects or not destinations:
-            logger.warning("No objects or destinations extracted from task")
+            if relations:
+                relations = self._apply_cabinet_drawer_mapping(relations, scene_objects)
+                relations = self._ensure_open_before_place_in(relations)
+                preconditions = self._generate_initial_preconditions(relations)
+
+                final_state = self._simulate_final_state(relations)
+                postconditions = self._generate_postconditions_from_state(final_state, relations)
+
+        if not postconditions:
+            logger.error("Relations Summary extraction failed - cannot generate accurate PDDL conditions")
             return {'preconditions': [], 'postconditions': []}
 
-        object_dest_pairs = []
-        for i, obj in enumerate(objects):
-            if i < len(destinations):
-                dest = destinations[i]
-            elif destinations:
-                dest = destinations[-1]  
-            else:
-                continue
-            object_dest_pairs.append((obj, dest))
-
-        for obj, dest in object_dest_pairs:
-            action_type = self._infer_action_type(actions, obj, dest)
-
-            template = self.templates.get('pddl', {}).get(action_type, {})
-
-            if template:
-                for precond in template.get('preconditions', []):
-                    instantiated = precond.replace('{object}', obj).replace('{destination}', dest)
-                    if '{' not in instantiated:
-                        preconditions.append(instantiated)
-            else:
-                preconditions.extend([
-                    f"exists({obj})",
-                    f"at(robot, {obj})",
-                    "gripper_empty()"
-                ])
-
-            if template:
-                for postcond in template.get('postconditions', []):
-                    instantiated = postcond.replace('{object}', obj).replace('{destination}', dest)
-                    if '{' not in instantiated:
-                        postconditions.append(instantiated)
-            else:
-                postconditions.extend([
-                    f"at({obj}, {dest})",
-                    f"not(holding({obj}))"
-                ])
-
-        if objects:
-            postconditions.append("gripper_empty()")
-
-        logger.info(f"Generated PDDL conditions for {len(object_dest_pairs)} object-destination pairs")
+        logger.info(f"Generated PDDL conditions: {len(preconditions)} preconditions, {len(postconditions)} postconditions")
 
         return {
             'preconditions': preconditions,
             'postconditions': postconditions
         }
 
-    def _infer_action_type(self, actions: List[str], obj: str, dest: str) -> str:
-        """
-        Infer which PDDL template to use based on extracted actions.
+    def _extract_relations_from_semantic(self, llm_contextual: str) -> List[Dict]:
+        relations = []
 
-        Returns: 'pickup', 'place', or 'navigate'
-        """
-        actions_lower = [a.lower() for a in actions]
+        if not llm_contextual or "### Relations Summary:" not in llm_contextual:
+            return relations
 
-        if any(a in actions_lower for a in ['place', 'put', 'drop']):
-            return 'place'
-        elif any(a in actions_lower for a in ['pickup', 'pick', 'grab']):
-            return 'pickup'
-        elif any(a in actions_lower for a in ['navigate', 'goto', 'go', 'move']):
-            return 'navigate'
+        try:
+            json_section = llm_contextual.split("### Relations Summary:")[1]
+            if "```" in json_section:
+                json_section = json_section.split("```")[0]
 
-        return 'place'
-    
+            json_section = json_section.strip()
+            if json_section.startswith("["):
+                relations = json.loads(json_section)
+
+            return relations
+        except Exception as e:
+            logger.warning(f"Failed to parse Relations Summary from semantic context: {e}")
+            return []
+
+    def _apply_cabinet_drawer_mapping(self, relations: List[Dict], scene_objects: Optional[List[str]] = None) -> List[Dict]:
+        corrected_relations = []
+
+        for rel in relations:
+            corrected_rel = rel.copy()
+
+            if rel.get('action') == 'place':
+                destination = rel.get('destination', '')
+                relation = rel.get('rel', '')
+
+                if relation == 'on' and 'drawer' in destination.lower():
+                    logger.info(f"Mapping correction: 'on {destination}' → 'on Cabinet' (Drawers don't have surfaces)")
+                    corrected_rel['destination'] = 'Cabinet'
+
+                elif relation == 'in' and 'cabinet' in destination.lower() and 'drawer' not in destination.lower():
+                    logger.info(f"Mapping correction: 'in {destination}' → 'in Drawer' (Cabinets contain Drawers)")
+                    corrected_rel['destination'] = 'Drawer'
+
+            corrected_relations.append(corrected_rel)
+
+        return corrected_relations
+
+    def _ensure_open_before_place_in(self, relations: List[Dict]) -> List[Dict]:
+        corrected_relations = []
+        opened_containers = set()
+
+        for i, rel in enumerate(relations):
+            if rel.get('action') == 'open':
+                opened_containers.add(rel.get('target', '').lower())
+
+            if rel.get('action') == 'place' and rel.get('rel') == 'in':
+                destination = rel.get('destination', '')
+                destination_lower = destination.lower()
+
+                if destination_lower not in opened_containers:
+                    logger.info(f"Inserting 'open {destination}' before 'place in {destination}'")
+                    corrected_relations.append({
+                        "action": "navigate",
+                        "destination": destination
+                    })
+                    corrected_relations.append({
+                        "action": "open",
+                        "target": destination
+                    })
+                    opened_containers.add(destination_lower)
+
+            corrected_relations.append(rel)
+
+        return corrected_relations
+
+    def _generate_initial_preconditions(self, relations: List[Dict]) -> List[str]:
+        preconditions = []
+        objects_needed = set()
+
+        for rel in relations:
+            if 'obj' in rel:
+                objects_needed.add(rel['obj'])
+            if 'target' in rel:
+                objects_needed.add(rel['target'])
+            if 'destination' in rel:
+                objects_needed.add(rel['destination'])
+
+        for obj in sorted(objects_needed):
+            preconditions.append(f"exists({obj})")
+
+        preconditions.append("gripper_empty()")
+
+        return preconditions
+
+    def _simulate_final_state(self, relations: List[Dict]) -> Dict:
+        state = {
+            'robot_at': None,
+            'holding': None,
+            'objects_at': {},
+            'opened': set(),
+            'powered': set(),
+            'sliced': set(),
+            'broken': set()
+        }
+
+        for rel in relations:
+            action = rel.get('action')
+
+            if action == 'navigate':
+                state['robot_at'] = rel.get('destination')
+
+            elif action == 'pickup':
+                if state['holding'] is None:
+                    obj = rel.get('obj')
+                    state['holding'] = obj
+                    if obj in state['objects_at']:
+                        del state['objects_at'][obj]
+
+            elif action == 'place':
+                if state['holding']:
+                    obj = state['holding']
+                    dest = rel.get('destination')
+                    state['objects_at'][obj] = dest
+                    state['holding'] = None
+
+            elif action == 'open':
+                state['opened'].add(rel.get('target'))
+
+            elif action == 'close':
+                state['opened'].discard(rel.get('target'))
+
+            elif action == 'switch_on':
+                state['powered'].add(rel.get('target'))
+
+            elif action == 'switch_off':
+                state['powered'].discard(rel.get('target'))
+
+            elif action == 'slice':
+                state['sliced'].add(rel.get('target'))
+
+            elif action == 'break':
+                state['broken'].add(rel.get('target'))
+
+            elif action == 'throw' or action == 'drop':
+                state['holding'] = None
+
+        return state
+
+    def _generate_postconditions_from_state(self, state: Dict, relations: List[Dict]) -> List[str]:
+        postconditions = []
+
+        if state['robot_at']:
+            postconditions.append(f"at(robot, {state['robot_at']})")
+
+        if state['holding']:
+            postconditions.append(f"holding({state['holding']})")
+        else:
+            postconditions.append("gripper_empty()")
+
+        for obj, location in state['objects_at'].items():
+            rel_type = 'at'
+            for rel in relations:
+                if rel.get('action') == 'place' and rel.get('obj') == obj and rel.get('destination') == location:
+                    rel_type = rel.get('rel', 'at')
+                    break
+
+            if rel_type in ['on', 'in', 'under']:
+                postconditions.append(f"{rel_type}({obj}, {location})")
+            else:
+                postconditions.append(f"at({obj}, {location})")
+
+        for obj in state['opened']:
+            postconditions.append(f"opened({obj})")
+
+        for obj in state['powered']:
+            postconditions.append(f"powered_on({obj})")
+
+        for obj in state['sliced']:
+            postconditions.append(f"sliced({obj})")
+
+        for obj in state['broken']:
+            postconditions.append(f"broken({obj})")
+
+        return postconditions
+
     def generate_ltl_properties(self, task: str, scene_objects: Optional[List[str]] = None,
                                  robot_skills: Optional[List[str]] = None) -> List[str]:
         """
@@ -602,7 +725,16 @@ Gripper is empty
 
         logger.info(f"Generating invariants for task with {len(scene_objects)} scene objects")
 
-        pddl = self.extract_pddl_conditions(task, scene_objects, robot_skills)
+        llm_contextual = self.generate_llm_contextual(task, scene_objects, robot_skills)
+
+        relations = self._extract_relations_from_semantic(llm_contextual)
+
+        pddl = self.extract_pddl_conditions(
+            task,
+            scene_objects,
+            robot_skills,
+            semantic_context=llm_contextual
+        )
         logger.info(f"Generated {len(pddl['preconditions'])} preconditions, "
                    f"{len(pddl['postconditions'])} postconditions")
 
@@ -611,8 +743,6 @@ Gripper is empty
 
         stl = self.generate_stl_constraints(task, scene_objects, robot_skills)
         logger.info(f"Generated {len(stl)} STL constraints")
-
-        llm_contextual = self.generate_llm_contextual(task, scene_objects, robot_skills)
 
         if confidence_score and confidence_score < 0.5:
             logger.info("Low confidence - adding stricter safety constraints")
@@ -624,7 +754,8 @@ Gripper is empty
             pddl_postconditions=pddl['postconditions'],
             ltl_invariants=ltl,
             stl_constraints=stl,
-            llm_contextual=llm_contextual
+            llm_contextual=llm_contextual,
+            relations=relations
         )
 
         return self.validate_consistency(invariants)

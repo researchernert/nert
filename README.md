@@ -16,6 +16,7 @@
 ```bash
 conda create -n nert python=3.11 -y
 conda activate nert
+#if prompted, follow the steps below to initialize conda for your shell
 ```
 
 2. **Initialize conda for your shell:**
@@ -53,7 +54,9 @@ pip list
 5. **Configure API keys:**
 ```bash
 cp .env.example .env
-# Edit .env and add OPENAI_API_KEY or GOOGLE_API_KEY
+# create both .env.example and .env and add OPENAI_API_KEY or GOOGLE_API_KEY
+#OPENAI_API_KEY=
+#GOOGLE_API_KEY=
 ```
 
 ## Usage
@@ -146,7 +149,7 @@ If you have your training dataset or want to reuse our dataset:
 
 ```bash
 cd models/contrastive
-python train_contrastive.py --data ../../data/training_1200.csv --epochs 10
+python train_contrastive.py --data training_1200.csv --epochs 10
 ```
 
 ## Experiments/Benchmarks
@@ -221,6 +224,29 @@ python run_benchmark.py --data benchmark_621.csv --mode base_llm --temp 0.0
 ```bash
 cd experiments
 python run_benchmark.py --config my_config.yaml --mode nert
+```
+
+**Parameters Explained:**
+
+  | Parameter   | Options           | Description                             |
+  |-------------|-------------------|-----------------------------------------|
+  | --data      | benchmark_621.csv | CSV file with task/ground_truth columns |
+  | --mode      | nert or base_llm  | Classification method                   |
+  | --selective | (flag)            | Required to generate curves             |
+  | --workers   | 1-50              | Parallel workers (20 recommended)       |
+  | --temp      | 0.0-1.0           | LLM temperature (optional)              |
+  | --config    | config.yaml       | Config file path (optional)             |
+
+- Full commands above and selection prediction highlighted below:
+
+```bash
+#NERT Mode with Selective Prediction:
+python run_benchmark.py --data benchmark_621.csv --mode nert --selective --workers 20 --temp 0.0
+```
+
+```bash
+#Base LLM Mode with Selective Prediction:
+python run_benchmark.py --data benchmark_621.csv --mode base_llm --selective --workers 20
 ```
 
 **Analyze results: Shows individual results + side-by-side comparison if both exist**

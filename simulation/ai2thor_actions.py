@@ -48,10 +48,15 @@ class AI2THORActionExecutor:
         # Get reachable positions from scene
         self._initialize_scene()
 
+    def step_render(self, **kwargs):
+        """Central wrapper that always enforces renderImage=True for third-party camera frames."""
+        kwargs["renderImage"] = True
+        return self.controller.step(**kwargs)
+
     def _initialize_scene(self):
         """Initialize scene data from AI2-THOR."""
         try:
-            event = self.controller.step(action="GetReachablePositions")
+            event = self.step_render(action="GetReachablePositions")
             if event.metadata.get("actionReturn"):
                 self.reachable_positions = [
                     (p["x"], p["y"], p["z"])
@@ -73,6 +78,9 @@ class AI2THORActionExecutor:
         """Helper method to capture video frame if recording is enabled."""
         if self.video_recorder:
             try:
+                # Update camera to follow agent before capturing
+                self.video_recorder._update_overhead_follow()
+                # Capture the frame
                 self.video_recorder.capture_frame(action_name, success)
             except Exception as e:
                 logger.debug(f"Frame capture failed (non-critical): {e}")
@@ -95,7 +103,7 @@ class AI2THORActionExecutor:
         try:
             obj_pos = obj_data['position']
 
-            reachable_event = self.controller.step(action="GetReachablePositions")
+            reachable_event = self.step_render(action="GetReachablePositions")
             reachable = reachable_event.metadata.get('actionReturn', [])
 
             if not reachable:
@@ -114,7 +122,7 @@ class AI2THORActionExecutor:
 
             # Use 1.5m threshold for better interaction range
             if closest_pos and min_dist < 1.5:
-                event = self.controller.step(
+                event = self.step_render(
                     action="Teleport",
                     position=closest_pos,
                     forceAction=True
@@ -124,7 +132,7 @@ class AI2THORActionExecutor:
                     logger.info(f"Fallback navigation successful (teleported {min_dist:.2f}m from {obj_name})")
 
                     try:
-                        look_event = self.controller.step(
+                        look_event = self.step_render(
                             action="LookAtObject",
                             objectId=obj_id,
                             forceAction=True
@@ -151,7 +159,7 @@ class AI2THORActionExecutor:
     def _navigate_to_position(self, target_pos: Dict) -> bool:
         """Simple position-based navigation fallback."""
         try:
-            reachable = self.controller.step(action="GetReachablePositions").metadata.get('actionReturn', [])
+            reachable = self.step_render(action="GetReachablePositions").metadata.get('actionReturn', [])
 
             if not reachable:
                 return False
@@ -167,7 +175,7 @@ class AI2THORActionExecutor:
                     closest_pos = pos
 
             if closest_pos and min_dist < 1.5:  # Within 1.5 meters
-                event = self.controller.step(
+                event = self.step_render(
                     action="Teleport",
                     position=closest_pos,
                     forceAction=True
@@ -209,6 +217,10 @@ class AI2THORActionExecutor:
                 self._capture_frame("Initial State", True)
 
             for action_str in actions:
+                action_str_stripped = action_str.strip()
+                if action_str_stripped.startswith('assert') or action_str_stripped.startswith('#') or not action_str_stripped:
+                    continue
+
                 parsed = self._parse_action(action_str)
                 if parsed:
                     self.action_queue.append(parsed)
@@ -370,7 +382,7 @@ class AI2THORActionExecutor:
                 self._capture_frame(f"GoToObject({dest_obj}) - Not Found", False)
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="ObjectNavExpertAction",
                 objectId=dest_obj_id
             )
@@ -389,7 +401,7 @@ class AI2THORActionExecutor:
                 self._capture_frame(f"GoToObject({dest_obj}) - No Path", False)
                 return False
 
-            event = self.controller.step(action=next_action, forceAction=True)
+            event = self.step_render(action=next_action, forceAction=True)
 
             if event.metadata.get("lastActionSuccess"):
                 logger.info(f"Reached {dest_obj}")
@@ -424,7 +436,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Object '{pick_obj}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="PickupObject",
                 objectId=pick_obj_id,
                 forceAction=True
@@ -467,7 +479,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Receptacle '{receptacle}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="PutObject",
                 objectId=recp_obj_id,
                 forceAction=True
@@ -506,7 +518,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Openable object '{obj_name}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="OpenObject",
                 objectId=target_id,
                 forceAction=True
@@ -545,7 +557,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Closeable object '{obj_name}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="CloseObject",
                 objectId=target_id,
                 forceAction=True
@@ -584,7 +596,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Toggleable object '{obj_name}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="ToggleObjectOn",
                 objectId=target_id,
                 forceAction=True
@@ -623,7 +635,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Toggleable object '{obj_name}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="ToggleObjectOff",
                 objectId=target_id,
                 forceAction=True
@@ -662,7 +674,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Breakable object '{obj_name}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="BreakObject",
                 objectId=target_id,
                 forceAction=True
@@ -701,7 +713,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Sliceable object '{obj_name}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="SliceObject",
                 objectId=target_id,
                 forceAction=True
@@ -746,7 +758,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Pushable object '{obj_name}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="PushObject",
                 objectId=target_id,
                 forceAction=True
@@ -785,7 +797,7 @@ class AI2THORActionExecutor:
                 logger.warning(f"Pullable object '{obj_name}' not found")
                 return False
 
-            event = self.controller.step(
+            event = self.step_render(
                 action="PullObject",
                 objectId=target_id,
                 forceAction=True
@@ -808,7 +820,7 @@ class AI2THORActionExecutor:
     def DropHandObject(self, robot: str) -> bool:
         """Drop currently held object."""
         try:
-            event = self.controller.step(
+            event = self.step_render(
                 action="DropHandObject",
                 forceAction=True
             )
